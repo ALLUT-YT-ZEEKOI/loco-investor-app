@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:investorapp/provider/functiion.dart';
+import 'package:investorapp/provider/earning_provider.dart';
 import 'package:investorapp/view/bottom_bar_screens/home_screen.dart';
 import 'package:investorapp/view/bottom_bar_screens/my_earnigns.dart';
 import 'package:investorapp/view/bottom_bar_screens/my_deductions.dart';
@@ -25,7 +25,7 @@ class BottomBar extends StatelessWidget {
     const BottomNavigationBarItem(
       icon: ImageIcon(AssetImage('assets/bottombar_icons/earing_icon.png'), color: Colors.white),
       activeIcon: ImageIcon(AssetImage('assets/bottombar_icons/earing_icon.png'), color: Colors.orange),
-      label: 'Earning',
+      label: 'Earnings',
     ),
     const BottomNavigationBarItem(
       icon: ImageIcon(AssetImage('assets/bottombar_icons/dedeuctuons.png'), color: Colors.white),

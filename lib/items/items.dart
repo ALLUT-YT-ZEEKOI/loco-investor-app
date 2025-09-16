@@ -20,22 +20,15 @@ class HomePageInvesteCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
         gradient: const LinearGradient(
-          begin: Alignment(0.50, -0.00),
-          end: Alignment(0.50, 1.00),
-          colors: [Color(0xFFE6E6E6), Color(0xFFF1F1F1)],
+          begin: Alignment(-1.00, 0.90),
+          end: Alignment(1.00, 0.50),
+          colors: [Colors.white, Color(0xFFE7E7E7)],
         ),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 2, color: Colors.white),
           borderRadius: BorderRadius.circular(20),
         ),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 20,
-            offset: Offset(0, 4),
-            spreadRadius: -7,
-          )
-        ],
+        shadows: const [BoxShadow(color: Color(0x3F000000), blurRadius: 20, offset: Offset(0, 4), spreadRadius: -7)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +37,7 @@ class HomePageInvesteCard extends StatelessWidget {
             bigText,
             style: const TextStyle(
               color: Color(0xFF222222),
-              fontSize: 32,
+              fontSize: 28,
               fontFamily: 'Calibri',
               fontWeight: FontWeight.w700,
             ),
@@ -88,26 +81,19 @@ class HomePageInvesteCard_2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: getScreenWidth(context) * .9,
+      // width: getScreenWidth(context) * .9,
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
         gradient: const LinearGradient(
-          begin: Alignment(0.50, -0.00),
-          end: Alignment(0.50, 1.00),
-          colors: [Color(0xFFE6E6E6), Color(0xFFF1F1F1)],
+          begin: Alignment(-1.00, 0.90),
+          end: Alignment(1.00, 0.50),
+          colors: [Colors.white, Color(0xFFE7E7E7)],
         ),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 2, color: Colors.white),
           borderRadius: BorderRadius.circular(20),
         ),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 20,
-            offset: Offset(0, 4),
-            spreadRadius: -7,
-          )
-        ],
+        shadows: const [BoxShadow(color: Color(0x3F000000), blurRadius: 20, offset: Offset(0, 4), spreadRadius: -7)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:investorapp/view/number_login.dart';
 import 'package:page_transition/page_transition.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

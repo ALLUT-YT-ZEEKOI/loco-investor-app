@@ -2,24 +2,21 @@ import 'package:flutter/material.dart';
 
 class MonthToggle extends StatefulWidget {
   final Function(String) onToggle;
+  final bool isThisMonth; // Add this parameter to control the state from parent
 
-  const MonthToggle({super.key, required this.onToggle});
+  const MonthToggle(
+      {super.key, required this.onToggle, this.isThisMonth = true});
 
   @override
   State<MonthToggle> createState() => _MonthToggleState();
 }
 
 class _MonthToggleState extends State<MonthToggle> {
-  bool isThisMonth = true;
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        setState(() {
-          isThisMonth = !isThisMonth;
-          widget.onToggle(isThisMonth ? 'This Month' : 'Last Month');
-        });
+        widget.onToggle(widget.isThisMonth ? 'Last Month' : 'This Month');
       },
       child: Container(
         width: 174,
@@ -33,7 +30,9 @@ class _MonthToggleState extends State<MonthToggle> {
           children: [
             /// Animated toggle background
             AnimatedAlign(
-              alignment: isThisMonth ? Alignment.centerLeft : Alignment.centerRight,
+              alignment: widget.isThisMonth
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
               child: Container(
@@ -63,7 +62,7 @@ class _MonthToggleState extends State<MonthToggle> {
                     child: Text(
                       'This Month',
                       style: TextStyle(
-                        color: isThisMonth ? Colors.white : Colors.black,
+                        color: widget.isThisMonth ? Colors.white : Colors.black,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Montserrat',
@@ -78,7 +77,7 @@ class _MonthToggleState extends State<MonthToggle> {
                     child: Text(
                       'Last Month',
                       style: TextStyle(
-                        color: isThisMonth ? Colors.black : Colors.white,
+                        color: widget.isThisMonth ? Colors.black : Colors.white,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Montserrat',

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:investorapp/extrafunction/reusable.dart';
+import 'package:investorapp/provider/api_provider.dart';
+import 'package:investorapp/provider/objects.dart';
+import 'package:provider/provider.dart';
 
 class HorizontalBikeCards extends StatefulWidget {
   const HorizontalBikeCards({super.key});
@@ -12,30 +15,6 @@ class _HorizontalBikeCardsState extends State<HorizontalBikeCards> {
   final PageController _pageController = PageController(viewportFraction: 0.9);
   final ScrollController _dotController = ScrollController();
   int _currentPage = 0;
-
-  final List<Widget> cards = [
-    const MainBikecard(
-      status: 'In Trip',
-      statusColor: Color(0xFF5DC452),
-      bgStatusColor: Color(0xFF2F9623),
-      borderClr: Color(0xFF5DC452),
-      iconPath: 'assets/motorbike.png',
-    ),
-    const MainBikecard(
-      status: 'Idle',
-      statusColor: Color(0xFFFD880B),
-      bgStatusColor: Color(0xFFBA6204),
-      borderClr: Color(0xFFFD880B),
-      iconPath: 'assets/idel_icon.png', // Add a suitable icon to your assets
-    ),
-    const MainBikecard(
-      status: 'In Service',
-      statusColor: Color(0xFFFF4E47),
-      bgStatusColor: Color(0xFFD21B14),
-      borderClr: Color(0xFFFF4E47),
-      iconPath: 'assets/service_icon (2).png', // Add a suitable icon to your assets
-    ),
-  ];
 
   @override
   void initState() {
@@ -62,74 +41,127 @@ class _HorizontalBikeCardsState extends State<HorizontalBikeCards> {
     );
   }
 
+  // Helper method to get status colors
+  Map<String, dynamic> _getStatusColors(String status) {
+    switch (status.toLowerCase()) {
+      case 'idle':
+        return {
+          'statusColor': const Color(0xFFFD880B),
+          'bgStatusColor': const Color(0xFFBA6204),
+          'borderClr': const Color(0xFFFD880B),
+          'iconPath': 'assets/idel_icon.png',
+        };
+      case 'in trip':
+      case 'active':
+        return {
+          'statusColor': const Color(0xFF5DC452),
+          'bgStatusColor': const Color(0xFF2F9623),
+          'borderClr': const Color(0xFF5DC452),
+          'iconPath': 'assets/motorbike.png',
+        };
+      case 'in service':
+      case 'maintenance':
+        return {
+          'statusColor': const Color(0xFFFF4E47),
+          'bgStatusColor': const Color(0xFFD21B14),
+          'borderClr': const Color(0xFFFF4E47),
+          'iconPath': 'assets/service_icon (2).png',
+        };
+      default:
+        return {
+          'statusColor': const Color(0xFF6B7280),
+          'bgStatusColor': const Color(0xFF4B5563),
+          'borderClr': const Color(0xFF6B7280),
+          'iconPath': 'assets/idel_icon.png',
+        };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 5),
-        SizedBox(
-          height: 355,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: cards.length,
-            onPageChanged: (index) {
-              setState(() => _currentPage = index);
-              _updateDotPosition();
-            },
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 5),
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  child: cards[index],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (cards.length > 1)
-          SizedBox(
-            height: 8,
-            child: SingleChildScrollView(
-              controller: _dotController,
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    cards.length,
-                    (index) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: _currentPage == index ? 14 : 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: _currentPage == index ? Colors.orange : Colors.grey.shade400,
-                          borderRadius: BorderRadius.circular(4),
+    return Consumer<ApiProvider>(
+      builder: (context, apiProvider, child) {
+        if (apiProvider.getAssets.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          children: [
+            const SizedBox(height: 5),
+            SizedBox(
+              height: 355,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: apiProvider.getAssets.length,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                  _updateDotPosition();
+                },
+                itemBuilder: (context, index) {
+                  Asset asset = apiProvider.getAssets[index];
+                  Map<String, dynamic> statusColors = _getStatusColors(asset.status);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 5),
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      child: MainBikecard(
+                        asset: asset,
+                        statusColor: statusColors['statusColor'],
+                        bgStatusColor: statusColors['bgStatusColor'],
+                        borderClr: statusColors['borderClr'],
+                        iconPath: statusColors['iconPath'],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (apiProvider.getAssets.length > 1)
+              SizedBox(
+                height: 8,
+                child: SingleChildScrollView(
+                  controller: _dotController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        apiProvider.getAssets.length,
+                        (index) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: _currentPage == index ? 14 : 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index ? Colors.orange : Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
 class MainBikecard extends StatelessWidget {
-  final String status;
+  final Asset asset;
   final Color statusColor;
   final Color bgStatusColor;
   final Color borderClr;
   final String iconPath;
 
-  const MainBikecard({super.key, required this.status, required this.statusColor, required this.bgStatusColor, required this.borderClr, required this.iconPath});
+  const MainBikecard({super.key, required this.asset, required this.statusColor, required this.bgStatusColor, required this.borderClr, required this.iconPath});
 
   @override
   Widget build(BuildContext context) {
@@ -154,15 +186,65 @@ class MainBikecard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/tvslogo.png', width: 50, height: 50),
+                // Manufacturer logo from API with fast loading
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    asset.manufacturerLogo,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.contain,
+                    cacheWidth: 100, // Cache at 2x resolution for crisp display
+                    cacheHeight: 100,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.motorcycle, color: Colors.grey),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('TVS', textScaler: noTextScaler, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
-                      SizedBox(height: 2),
-                      Text('Jupiter BS6 2025...', maxLines: 1, overflow: TextOverflow.ellipsis, textScaler: noTextScaler, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        asset.manufacturer,
+                        textScaler: noTextScaler,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        asset.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textScaler: noTextScaler,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
@@ -189,7 +271,7 @@ class MainBikecard extends StatelessWidget {
                             ],
                           ),
                           child: Text(
-                            status,
+                            asset.status,
                             textScaler: noTextScaler,
                             style: const TextStyle(
                               color: Colors.white,
@@ -218,7 +300,17 @@ class MainBikecard extends StatelessWidget {
                 Image.asset('assets/flat_img.png', fit: BoxFit.fitWidth, width: double.infinity),
                 Positioned(
                   top: 10,
-                  child: Image.asset('assets/TVS Jupiter.png', width: 290, fit: BoxFit.contain),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      asset.image,
+                      width: 290,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset('assets/TVS Jupiter.png', width: 290, fit: BoxFit.contain);
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -228,21 +320,21 @@ class MainBikecard extends StatelessWidget {
           /// Bottom Info
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Today’s Earnings:', style: totalEarning),
-                    Text('₹1500', style: totalEarningamt),
+                    const Text('Owner Profit:', style: totalEarning),
+                    Text('₹${asset.ownerProfitAmt.toStringAsFixed(0)}', style: totalEarningamt),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total KM:', style: totalEarning),
-                    Text('130km', style: totalEarningamtred),
+                    const Text('Asset ID:', style: totalEarning),
+                    Text(asset.assetIdentifier, style: totalEarningamtred),
                   ],
                 ),
               ],

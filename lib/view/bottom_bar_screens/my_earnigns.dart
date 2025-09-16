@@ -4,6 +4,9 @@ import 'package:shimmer/shimmer.dart';
 import 'package:investorapp/customwidgets/custom_title_app_bar.dart';
 import 'package:investorapp/customwidgets/custom_toggle.dart';
 import 'package:investorapp/items/items.dart';
+import 'package:investorapp/provider/api_provider.dart';
+import 'package:investorapp/provider/objects.dart';
+import 'package:provider/provider.dart';
 
 class MyEarnigns extends StatefulWidget {
   const MyEarnigns({super.key});
@@ -14,69 +17,119 @@ class MyEarnigns extends StatefulWidget {
 
 class _MyBikeScreenState extends State<MyEarnigns> {
   bool isLoading = true;
+  bool isVehicleEarningsLoading =
+      false; // Separate loading state for vehicle earnings section
+  String currentMonthFilter = 'this_month'; // Track current filter state
 
   @override
   void initState() {
     super.initState();
-    // Simulate data loading
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        isLoading = false;
-      });
+    // Load assets data for current month by default
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Provider.of<ApiProvider>(context, listen: false)
+          .filterAssetsByMonth('this_month');
+      if (mounted) {
+        setState(() {
+          isLoading = false; // Hide initial loading after data is loaded
+        });
+      }
     });
+  }
+
+  // Calculate total earnings from filtered assets
+  String _calculateTotalEarnings(List<Asset> assets) {
+    if (assets.isEmpty) return "0";
+    double total = assets.fold(0.0, (sum, asset) => sum + asset.ownerProfitAmt);
+    return total.toStringAsFixed(0);
+  }
+
+  // Count assets with profit > 0
+  int _countProfitableAssets(List<Asset> assets) {
+    return assets.where((asset) => asset.ownerProfitAmt > 0).length;
+  }
+
+  // Handle month toggle
+  void _handleMonthToggle(String monthType) async {
+    setState(() {
+      currentMonthFilter =
+          monthType == 'This Month' ? 'this_month' : 'last_month';
+      isVehicleEarningsLoading =
+          true; // Show shimmer for vehicle earnings section
+    });
+
+    // Filter assets based on selected month
+    await Provider.of<ApiProvider>(context, listen: false)
+        .filterAssetsByMonth(currentMonthFilter);
+
+    // Hide shimmer after loading is complete
+    if (mounted) {
+      setState(() {
+        isVehicleEarningsLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: customTitleAppBar(context, "My", "Earning"),
-      body: ScrollConfiguration(
-        behavior: const ScrollBehavior().copyWith(overscroll: false),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    isLoading
-                        ? shimmerBox(width: 150, height: 100)
-                        : const HomePageInvesteCard(
-                            bigText: "1",
-                            description: "Total Earnings\n(Lifetime)",
-                            imagePath: 'assets/earning_icon.png',
+      appBar: customTitleAppBar(context, "My", "Earnings"),
+      body: isLoading
+          ? _buildShimmerLoading()
+          : Consumer<ApiProvider>(
+              builder: (context, apiProvider, child) {
+                return ScrollConfiguration(
+                  behavior: const ScrollBehavior().copyWith(overscroll: false),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 13, vertical: 8),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              HomePageInvesteCard(
+                                bigText:
+                                    apiProvider.allAssets.length.toString(),
+                                description: "Total Bikes\ninvested",
+                                imagePath: 'assets/transport 1 (1).png',
+                              ),
+                              const Spacer(),
+                              HomePageInvesteCard(
+                                bigText:
+                                    "₹${_calculateTotalEarnings(apiProvider.allAssets)}",
+                                description: "Total Earnings\n(Lifetime)",
+                                imagePath: 'assets/earning_icon.png',
+                              ),
+                            ],
                           ),
-                    const Spacer(),
-                    isLoading
-                        ? shimmerBox(width: 150, height: 100)
-                        : const HomePageInvesteCard(
-                            bigText: "₹1500",
-                            description: "Total Deductions \n(Lifetime)",
-                            imagePath: 'assets/earning_icon.png',
+                          const SizedBox(height: 18),
+                          MonthToggle(
+                            isThisMonth: currentMonthFilter == 'this_month',
+                            onToggle: _handleMonthToggle,
                           ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                isLoading ? shimmerBox(width: double.infinity, height: 40) : MonthToggle(onToggle: (p) {}),
-                const SizedBox(height: 18),
-                isLoading ? shimmerBox(width: double.infinity, height: 100) : _summaryCard(),
-                const SizedBox(height: 18),
-                isLoading ? shimmerBox(width: double.infinity, height: 70) : _earningRow(),
-              ],
+                          const SizedBox(height: 18),
+                          _summaryCard(apiProvider),
+                          const SizedBox(height: 18),
+                          isVehicleEarningsLoading
+                              ? shimmerBox(width: double.infinity, height: 70)
+                              : _earningRow(apiProvider.getAssets),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _summaryCard() {
+  Widget _summaryCard(ApiProvider apiProvider) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
         gradient: const LinearGradient(
-          begin: Alignment(0.00, 0.50),
+          begin: Alignment(-1.00, 0.90),
           end: Alignment(1.00, 0.50),
           colors: [Colors.white, Color(0xFFE7E7E7)],
         ),
@@ -84,23 +137,52 @@ class _MyBikeScreenState extends State<MyEarnigns> {
           side: const BorderSide(width: 2, color: Colors.white),
           borderRadius: BorderRadius.circular(20),
         ),
-        shadows: const [BoxShadow(color: Color(0x3F000000), blurRadius: 20, offset: Offset(0, 4), spreadRadius: -7)],
+        shadows: const [
+          BoxShadow(
+            color: Color(0x3F000000),
+            blurRadius: 31.50,
+            offset: Offset(0, 4),
+            spreadRadius: -7,
+          )
+        ],
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Total Bookings', style: TextStyle(color: Color(0xFF7B7B7B), fontSize: 12, fontFamily: 'Montserrat', fontWeight: FontWeight.w500)),
-              Text('15', style: TextStyle(color: Colors.black, fontSize: 18, fontFamily: 'Calibri', fontWeight: FontWeight.w800)),
+              Text(
+                  'Total Bookings\n${currentMonthFilter == 'this_month' ? '(This Month)' : '(Last Month)'}',
+                  style: const TextStyle(
+                      color: Color(0xFF7B7B7B),
+                      fontSize: 12,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w500)),
+              Text(_countProfitableAssets(apiProvider.getAssets).toString(),
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontFamily: 'Calibri',
+                      fontWeight: FontWeight.w800)),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Total Earnings', style: TextStyle(color: Color(0xFF7B7B7B), fontSize: 12, fontFamily: 'Montserrat', fontWeight: FontWeight.w500)),
-              Text('₹5,000', style: TextStyle(color: Colors.black, fontSize: 20, fontFamily: 'Calibri', fontWeight: FontWeight.w700)),
+              Text(
+                  'Total Rental Income\n${currentMonthFilter == 'this_month' ? '(This Month)' : '(Last Month)'}',
+                  style: const TextStyle(
+                      color: Color(0xFF7B7B7B),
+                      fontSize: 12,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w500)),
+              Text("₹${_calculateTotalEarnings(apiProvider.getAssets)}",
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontFamily: 'Calibri',
+                      fontWeight: FontWeight.w700)),
             ],
           ),
         ],
@@ -108,9 +190,60 @@ class _MyBikeScreenState extends State<MyEarnigns> {
     );
   }
 
-  Widget _earningRow() {
+  Widget _earningRow(List<Asset> assets) {
+    if (assets.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(8),
+        child: const Center(
+          child: Text(
+            'No assets found',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            currentMonthFilter == 'this_month'
+                ? 'This Month Vehicle Earnings'
+                : 'Last Month Vehicle Earnings',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...assets.map((asset) => _buildVehicleRow(asset)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleRow(Asset asset) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
@@ -134,38 +267,141 @@ class _MyBikeScreenState extends State<MyEarnigns> {
                 )
               ],
             ),
-            child: Center(child: Image.asset('assets/small_scooter.png')),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: Image.network(
+                asset.manufacturerLogo,
+                width: 55,
+                height: 55,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Center(child: Image.asset('assets/small_scooter.png'));
+                },
+              ),
+            ),
           ),
           const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  asset.assetIdentifier,
+                  style: const TextStyle(
+                    color: Color(0xFF7B7B7B),
+                    fontSize: 11,
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  asset.name,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(asset.status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    asset.status.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'TVS Jupiter BS6 2025',
-                style: TextStyle(
-                  color: Color(0xFF7B7B7B),
-                  fontSize: 11,
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w500,
-                ),
+                '₹${asset.ownerProfitAmt.toStringAsFixed(0)}',
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontFamily: 'Calibri',
+                    fontWeight: FontWeight.w700),
               ),
-              Text(
-                'Title',
+              const Text(
+                'Profit',
                 style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w700,
-                ),
+                    color: Color(0xFF7B7B7B),
+                    fontSize: 10,
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w500),
               ),
             ],
           ),
-          const Spacer(),
-          const Text(
-            '₹1,000',
-            style: TextStyle(color: Colors.black, fontSize: 18, fontFamily: 'Calibri', fontWeight: FontWeight.w500),
-          )
         ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'idle':
+        return const Color(0xFFFD880B);
+      case 'in trip':
+      case 'active':
+        return const Color(0xFF5DC452);
+      case 'in service':
+      case 'maintenance':
+        return const Color(0xFFFF4E47);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  // 🔧 Shimmer Loading for entire page
+  Widget _buildShimmerLoading() {
+    return ScrollConfiguration(
+      behavior: const ScrollBehavior().copyWith(overscroll: false),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          child: Column(
+            children: [
+              // Top cards shimmer
+              Row(
+                children: [
+                  Expanded(
+                    child: shimmerBox(width: double.infinity, height: 100),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: shimmerBox(width: double.infinity, height: 100),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // Month toggle shimmer
+              shimmerBox(width: double.infinity, height: 50),
+              const SizedBox(height: 18),
+              // Summary card shimmer
+              shimmerBox(width: double.infinity, height: 80),
+              const SizedBox(height: 18),
+              // Vehicle earnings shimmer
+              shimmerBox(width: double.infinity, height: 200),
+            ],
+          ),
+        ),
       ),
     );
   }

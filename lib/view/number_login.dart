@@ -1,13 +1,29 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:investorapp/provider/api_provider.dart';
 import 'package:investorapp/view/otp_screen.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:provider/provider.dart';
 
-class NumberLogin extends StatelessWidget {
+class NumberLogin extends StatefulWidget {
   const NumberLogin({super.key});
 
   @override
+  State<NumberLogin> createState() => _NumberLoginState();
+}
+
+class _NumberLoginState extends State<NumberLogin> {
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final apiProvider = Provider.of<ApiProvider>(context, listen: false);
     return Scaffold(
       appBar: PreferredSize(
           preferredSize: const Size.fromHeight(0),
@@ -99,92 +115,101 @@ class NumberLogin extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 100),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('Enter your login information',
-                                            textAlign: TextAlign.center, style: TextStyle(color: Colors.black, fontSize: 16, fontFamily: 'Roboto', fontWeight: FontWeight.w600)),
-                                        const SizedBox(height: 8),
-                                        Container(
-                                          width: 293,
-                                          height: 53,
-                                          decoration: const ShapeDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [Color(0xFFE6E6E6), Color(0xFFF1F1F1)],
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              side: BorderSide(width: 2, color: Colors.white),
-                                              borderRadius: BorderRadius.all(Radius.circular(9.75)),
-                                            ),
-                                            shadows: [
-                                              BoxShadow(
-                                                color: Color(0x3F000000),
-                                                blurRadius: 31.50,
-                                                offset: Offset(0, 4),
-                                                spreadRadius: -7,
-                                              )
-                                            ],
+                                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      const Text('Enter your login information',
+                                          textAlign: TextAlign.center, style: TextStyle(color: Colors.black, fontSize: 16, fontFamily: 'Roboto', fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        width: 293,
+                                        height: 53,
+                                        decoration: const ShapeDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [Color(0xFFE6E6E6), Color(0xFFF1F1F1)],
                                           ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              const Text('+91', style: TextStyle(color: Colors.black, fontSize: 12, fontFamily: 'Roboto', fontWeight: FontWeight.w700)),
-                                              const SizedBox(width: 10),
-                                              Container(
-                                                width: 2,
-                                                height: 27,
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFD9D9D9),
-                                                  borderRadius: BorderRadius.circular(58),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              const Expanded(
-                                                child: Text(
-                                                  'Enter Your Phone Number',
-                                                  style: TextStyle(
+                                          shape: RoundedRectangleBorder(
+                                            side: BorderSide(width: 2, color: Colors.white),
+                                            borderRadius: BorderRadius.all(Radius.circular(9.75)),
+                                          ),
+                                          shadows: [
+                                            BoxShadow(
+                                              color: Color(0x3F000000),
+                                              blurRadius: 31.50,
+                                              offset: Offset(0, 4),
+                                              spreadRadius: -7,
+                                            )
+                                          ],
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: Row(
+                                          children: [
+                                            const Text('+91', style: TextStyle(fontWeight: FontWeight.w700)),
+                                            const SizedBox(width: 10),
+                                            Container(
+                                              width: 2,
+                                              height: 27,
+                                              color: const Color(0xFFD9D9D9),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: TextField(
+                                                controller: _phoneController,
+                                                keyboardType: TextInputType.phone,
+                                                decoration: const InputDecoration(
+                                                  hintText: 'Enter Your Phone Number',
+                                                  border: InputBorder.none,
+                                                  hintStyle: TextStyle(
                                                     color: Color(0xFF8E8E8E),
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     fontFamily: 'Roboto',
                                                     fontWeight: FontWeight.w400,
                                                   ),
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 35),
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          PageTransition(type: PageTransitionType.rightToLeft, child: const OtpScreen(), duration: const Duration(milliseconds: 300)),
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 293,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF23300),
-                                          borderRadius: BorderRadius.circular(9.75),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Text(
-                                          'GET OTP',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontFamily: 'Roboto',
-                                            fontWeight: FontWeight.w800,
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 35),
+                                      GestureDetector(
+                                        onTap: () {
+                                          final phone = _phoneController.text.trim();
+
+                                          if (phone.length == 10) {
+                                            apiProvider.setPhoneNumber(phone);
+
+                                            apiProvider.getOtp();
+                                            Navigator.push(
+                                              context,
+                                              PageTransition(type: PageTransitionType.rightToLeft, child: const OtpScreen(), duration: const Duration(milliseconds: 300)),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Please enter a valid 10-digit phone number")),
+                                            );
+                                          }
+                                        },
+                                        child: Container(
+                                          width: 293,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF23300),
+                                            borderRadius: BorderRadius.circular(9.75),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: const Text(
+                                            'GET OTP',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontFamily: 'Roboto',
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    ]),
                                   ],
                                 ),
                               ),

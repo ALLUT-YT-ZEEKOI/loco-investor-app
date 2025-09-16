@@ -1,13 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:investorapp/extrafunction/reusable.dart';
+import 'package:investorapp/provider/api_provider.dart';
+import 'package:investorapp/provider/theme_provider.dart';
+import 'package:investorapp/view/login_page.dart';
 import 'package:investorapp/view/screens/view_profile_screen.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:provider/provider.dart';
 
-class MyProfile extends StatelessWidget {
+class MyProfile extends StatefulWidget {
   const MyProfile({super.key});
 
   @override
+  State<MyProfile> createState() => _MyProfileState();
+}
+
+class _MyProfileState extends State<MyProfile> {
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    Provider.of<ApiProvider>(context, listen: false).getUser();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final apiProvider = Provider.of<ApiProvider>(context, listen: false);
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80),
@@ -17,7 +35,8 @@ class MyProfile extends StatelessWidget {
           automaticallyImplyLeading: false,
           flexibleSpace: SafeArea(
             child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(children: [
                   Expanded(
                     child: Container(
@@ -35,35 +54,36 @@ class MyProfile extends StatelessWidget {
                         shadows: const [
                           BoxShadow(
                             color: Color(0x3F000000),
-                            blurRadius: 20,
+                            blurRadius: 31.50,
                             offset: Offset(0, 4),
                             spreadRadius: -7,
                           )
                         ],
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          SizedBox(width: 4),
-                          CircleAvatar(
+                          const SizedBox(width: 4),
+                          const CircleAvatar(
                             radius: 22,
-                            backgroundImage: AssetImage('assets/maskperson.png'),
+                            backgroundImage:
+                                AssetImage('assets/maskperson.png'),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Qureshi Abrahm',
+                                apiProvider.currentUser?.name ?? 'User Name',
                                 textScaler: noTextScaler,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 16,
                                   fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Invester since 2025',
                                 textScaler: noTextScaler,
                                 style: TextStyle(
@@ -101,7 +121,11 @@ class MyProfile extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: IconButton(onPressed: () {}, icon: Image.asset('assets/Power_btn.png', width: 22)))
+                      child: IconButton(
+                          onPressed: () {
+                            _showLogoutConfirmation(context, apiProvider);
+                          },
+                          icon: Image.asset('assets/Power_btn.png', width: 22)))
                 ])),
           ),
         ),
@@ -116,7 +140,10 @@ class MyProfile extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      PageTransition(type: PageTransitionType.rightToLeft, child: const ViewProfileScreen(), duration: const Duration(milliseconds: 300)),
+                      PageTransition(
+                          type: PageTransitionType.rightToLeft,
+                          child: const ViewProfileScreen(),
+                          duration: const Duration(milliseconds: 300)),
                     );
                   },
                   child: Container(
@@ -125,14 +152,19 @@ class MyProfile extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(width: 1.07, color: const Color(0xFFE8E8E8)),
+                        border: Border.all(
+                            width: 1.07, color: const Color(0xFFE8E8E8)),
                       ),
                       child: Row(children: [
-                        const ProfileIcon(path: "assets/myProfileImages/profile_icon.png"),
+                        const ProfileIcon(
+                            path: "assets/myProfileImages/profile_icon.png"),
                         const SizedBox(width: 15),
                         const Text(
                           'View Profile',
-                          style: TextStyle(fontSize: 15, fontFamily: 'Montserrat', fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600),
                         ),
                         const Spacer(),
                         Container(
@@ -145,7 +177,8 @@ class MyProfile extends StatelessWidget {
                                 colors: [Color(0xFFE7E7E7), Colors.white],
                               ),
                               shape: RoundedRectangleBorder(
-                                side: const BorderSide(width: 2, color: Colors.white),
+                                side: const BorderSide(
+                                    width: 2, color: Colors.white),
                                 borderRadius: BorderRadius.circular(56.95),
                               ),
                               shadows: const [
@@ -161,10 +194,17 @@ class MyProfile extends StatelessWidget {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    PageTransition(type: PageTransitionType.rightToLeft, child: const ViewProfileScreen(), duration: const Duration(milliseconds: 300)),
+                                    PageTransition(
+                                        type: PageTransitionType.rightToLeft,
+                                        child: const ViewProfileScreen(),
+                                        duration:
+                                            const Duration(milliseconds: 300)),
                                   );
                                 },
-                                icon: Image.asset('assets/myProfileImages/arrow-larrow.png', width: 34, height: 24))),
+                                icon: Image.asset(
+                                    'assets/myProfileImages/arrow-larrow.png',
+                                    width: 34,
+                                    height: 24))),
                       ])),
                 ),
                 const SizedBox(
@@ -185,6 +225,67 @@ class MyProfile extends StatelessWidget {
               ))
         ],
       ),
+    );
+  }
+
+  void _showLogoutConfirmation(BuildContext context, ApiProvider apiProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Logout',
+            style: TextStyle(
+              fontSize: 18,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              fontSize: 14,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                apiProvider.logout();
+                Get.offAll(const LoginPage());
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 14,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -214,11 +315,16 @@ Container legalSection() {
         const SizedBox(height: 7),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
         const SizedBox(height: 7),
-        buildListItem('assets/myProfileImages/terms_condition.png', 'Terms & Conditions'),
+        buildListItem(
+            'assets/myProfileImages/terms_condition.png', 'Terms & Conditions'),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
-        buildListItem("assets/myProfileImages/privacy&policy.png", 'Privacy Policy'),
+        buildListItem(
+            "assets/myProfileImages/privacy&policy.png", 'Privacy Policy'),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
-        buildListItem('assets/myProfileImages/help_support.png', 'Help & Support'),
+        buildThemeToggle(),
+        const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
+        buildListItem(
+            'assets/myProfileImages/help_support.png', 'Help & Support'),
       ],
     ),
   );
@@ -241,5 +347,43 @@ Widget buildListItem(String path, String label) {
         ),
       ],
     ),
+  );
+}
+
+Widget buildThemeToggle() {
+  return Consumer<ThemeProvider>(
+    builder: (context, themeProvider, child) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+        child: Row(
+          children: [
+            Icon(
+              themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              size: 25,
+              color: themeProvider.isDarkMode ? Colors.amber : Colors.orange,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              themeProvider.isDarkMode ? 'Dark Mode' : 'Light Mode',
+              style: const TextStyle(
+                fontSize: 15,
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            Switch(
+              value: themeProvider.isDarkMode,
+              onChanged: (value) {
+                themeProvider.toggleTheme();
+              },
+              activeColor: Colors.blue,
+              inactiveThumbColor: Colors.grey,
+              inactiveTrackColor: Colors.grey.withOpacity(0.3),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }

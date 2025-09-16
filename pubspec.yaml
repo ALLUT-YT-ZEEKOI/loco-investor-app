@@ -42,6 +42,17 @@ dependencies:
   carousel_slider: ^5.1.1
   carousel_slider_plus: ^7.1.1
   provider: ^6.1.5
+  get: ^4.7.2
+  dartz: ^0.10.1
+  flutter_secure_storage: ^9.2.4
+  http: ^1.4.0
+  shared_preferences: 2.2.3
+  pin_code_fields: ^8.0.0
+  firebase_core: ^4.0.0
+  firebase_messaging: ^16.0.0
+  # flutter_local_notifications: ^19.4.0
+  
+
 
 
 dev_dependencies:
@@ -119,10 +130,12 @@ flutter:
     - assets/legal-document-01.png
     - assets/docu_download_icon.png
     - assets/new_back_btn.png
+    - assets/transport 1 (1).png
 
     # loginpage
     - assets/right_circle.png
     - assets/transaction-history.png
+    - assets\loader.png
 
 
 
