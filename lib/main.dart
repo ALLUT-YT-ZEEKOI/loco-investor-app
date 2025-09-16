@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:investorapp/provider/api_provider.dart';
 import 'package:investorapp/provider/earning_provider.dart';
+import 'package:investorapp/provider/theme_provider.dart';
 import 'package:investorapp/view/bottom_bar_screens/bottom_bar.dart';
 import 'package:investorapp/view/login_page.dart';
 import 'package:provider/provider.dart';
@@ -33,7 +34,14 @@ void main() async {
 void requestPermission() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-  NotificationSettings settings = await messaging.requestPermission(alert: true, badge: true, sound: true, announcement: false, carPlay: false, criticalAlert: false, provisional: false);
+  NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      announcement: false,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false);
 
   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
     print('✅ User granted permission');
@@ -86,7 +94,7 @@ void handleNotificationTap(RemoteMessage message) {
   if (message.data['screen'] == 'earnings') {
     Get.to(() => BottomBar());
   } else if (message.data['screen'] == 'profile') {
-    Get.to(() => BottomBar());                                                                                                                                                                
+    Get.to(() => BottomBar());
   }
 }
 
@@ -99,10 +107,18 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => EarningProvider()),
         ChangeNotifierProvider(create: (_) => ApiProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: const GetMaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: SplashScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return GetMaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: themeProvider.themeMode,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }
@@ -115,13 +131,15 @@ class SplashScreen extends StatefulWidget {
   SplashScreenState createState() => SplashScreenState();
 }
 
-class SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
     _animationController.forward();
     checkLogin();
   }
@@ -133,17 +151,23 @@ class SplashScreenState extends State<SplashScreen> with SingleTickerProviderSta
       final token = await storage.read(key: 'auth_token');
       if (token != null) {
         _navigateWithMinDelay(startTime, () {
-          Get.offAll(() => BottomBar(), transition: Transition.downToUp, duration: const Duration(milliseconds: 500));
+          Get.offAll(() => BottomBar(),
+              transition: Transition.downToUp,
+              duration: const Duration(milliseconds: 500));
         });
       } else {
         _navigateWithMinDelay(startTime, () {
-          Get.offAll(() => const LoginPage(), transition: Transition.downToUp, duration: const Duration(milliseconds: 500));
+          Get.offAll(() => const LoginPage(),
+              transition: Transition.downToUp,
+              duration: const Duration(milliseconds: 500));
         });
       }
     } catch (e) {
       await storage.delete(key: 'auth_token');
       _navigateWithMinDelay(startTime, () {
-        Get.offAll(() => const LoginPage(), transition: Transition.downToUp, duration: const Duration(milliseconds: 500));
+        Get.offAll(() => const LoginPage(),
+            transition: Transition.downToUp,
+            duration: const Duration(milliseconds: 500));
       });
     }
   }
@@ -168,7 +192,15 @@ class SplashScreenState extends State<SplashScreen> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(toolbarHeight: 0, backgroundColor: const Color(0xFFFFA50F)),
-        body: SafeArea(child: Container(width: double.infinity, height: double.infinity, color: Colors.white, child: Center(child: Image.asset('assets/loader.png', fit: BoxFit.cover)))));
+        appBar:
+            AppBar(toolbarHeight: 0, backgroundColor: const Color(0xFFFFA50F)),
+        body: SafeArea(
+            child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.white,
+                child: Center(
+                    child:
+                        Image.asset('assets/loader.png', fit: BoxFit.cover)))));
   }
 }
