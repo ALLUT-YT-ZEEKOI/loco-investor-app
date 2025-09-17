@@ -25,7 +25,7 @@ class _MyDeductionsState extends State<MyDeductions> {
   void initState() {
     super.initState();
 
-    // Load all assets data and current month data
+    // Load deductions data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final apiProvider = Provider.of<ApiProvider>(context, listen: false);
 
@@ -33,6 +33,9 @@ class _MyDeductionsState extends State<MyDeductions> {
       if (apiProvider.allAssets.isEmpty) {
         await apiProvider.getAllAssets();
       }
+
+      // Load deductions data
+      await apiProvider.getAllDeductions();
 
       // Then load current month data
       await apiProvider.filterAssetsByMonth('this_month');
@@ -83,9 +86,13 @@ class _MyDeductionsState extends State<MyDeductions> {
           true; // Show shimmer for vehicle deductions section
     });
 
+    final apiProvider = Provider.of<ApiProvider>(context, listen: false);
+
     // Filter assets based on selected month
-    await Provider.of<ApiProvider>(context, listen: false)
-        .filterAssetsByMonth(currentMonthFilter);
+    await apiProvider.filterAssetsByMonth(currentMonthFilter);
+
+    // Filter deductions based on selected month
+    await apiProvider.filterDeductionsByMonth(currentMonthFilter);
 
     // Hide shimmer after loading is complete
     if (mounted) {
@@ -128,7 +135,7 @@ class _MyDeductionsState extends State<MyDeductions> {
                           const SizedBox(height: 18),
                           isVehicleDeductionsLoading
                               ? shimmerBox(width: double.infinity, height: 70)
-                              : _deductionsList(apiProvider.getAssets),
+                              : _deductionsList(apiProvider.allDeductions),
                         ],
                       ),
                     ),
@@ -208,17 +215,13 @@ class _MyDeductionsState extends State<MyDeductions> {
     );
   }
 
-  Widget _deductionsList(List<Asset> assets) {
-    final assetsWithDeductions = _getAssetsWithDeductions(assets);
-
-    if (assetsWithDeductions.isEmpty) {
+  Widget _deductionsList(List<Deduction> deductions) {
+    if (deductions.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
         child: Center(
           child: Text(
-            currentMonthFilter == 'this_month'
-                ? 'No deductions found this month'
-                : 'No deductions found last month',
+            'No deductions found',
             style: const TextStyle(
               color: Color(0xFF7B7B7B),
               fontSize: 16,
@@ -236,9 +239,7 @@ class _MyDeductionsState extends State<MyDeductions> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Text(
-            currentMonthFilter == 'this_month'
-                ? 'This Month Vehicle Deductions'
-                : 'Last Month Vehicle Deductions',
+            'Vehicle Deductions',
             style: const TextStyle(
               color: Colors.black,
               fontSize: 16,
@@ -247,12 +248,12 @@ class _MyDeductionsState extends State<MyDeductions> {
             ),
           ),
         ),
-        ...assetsWithDeductions.map((asset) => _deductionRow(asset)),
+        ...deductions.map((deduction) => _deductionRow(deduction)),
       ],
     );
   }
 
-  Widget _deductionRow(Asset asset) {
+  Widget _deductionRow(Deduction deduction) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -286,28 +287,11 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                   ),
                   child: Center(
-                    child: asset.manufacturerLogo.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(27.5),
-                            child: Image.network(
-                              asset.manufacturerLogo,
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Image.asset(
-                                  'assets/small_scooter.png',
-                                  width: 30,
-                                  height: 30,
-                                );
-                              },
-                            ),
-                          )
-                        : Image.asset(
-                            'assets/small_scooter.png',
-                            width: 30,
-                            height: 30,
-                          ),
+                    child: Image.asset(
+                      'assets/small_scooter.png',
+                      width: 30,
+                      height: 30,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -317,7 +301,7 @@ class _MyDeductionsState extends State<MyDeductions> {
                     children: [
                       // Vehicle registration number
                       Text(
-                        asset.assetIdentifier,
+                        deduction.asset.assetIdentifier,
                         style: const TextStyle(
                           color: Color(0xFF7B7B7B),
                           fontSize: 12,
@@ -326,9 +310,9 @@ class _MyDeductionsState extends State<MyDeductions> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // Vehicle name/type
+                      // Category name (Wash, Repair, etc.)
                       Text(
-                        asset.name,
+                        deduction.cat.name,
                         style: const TextStyle(
                           color: Colors.black,
                           fontSize: 16,
@@ -368,8 +352,8 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      asset.ownerProfitAmt > 0
-                          ? asset.ownerProfitAmt.toStringAsFixed(0)
+                      deduction.amount > 0
+                          ? deduction.amount.toStringAsFixed(0)
                           : '0',
                       style: const TextStyle(
                         color: Colors.black,
@@ -394,8 +378,8 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      asset.payoutSum > 0
-                          ? asset.payoutSum.toStringAsFixed(0)
+                      deduction.companyShare > 0
+                          ? deduction.companyShare.toStringAsFixed(0)
                           : '0',
                       style: const TextStyle(
                         color: Colors.black,
@@ -420,8 +404,8 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      asset.deductionSum > 0
-                          ? '₹${_formatNumber(asset.deductionSum)}'
+                      deduction.ownerShare > 0
+                          ? '₹${_formatNumber(deduction.ownerShare)}'
                           : '₹0',
                       style: const TextStyle(
                         color: Colors.black,

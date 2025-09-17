@@ -108,7 +108,7 @@ class ApiProvider with ChangeNotifier {
         ApiResponse apiResponse = ApiResponse.fromJson(responseData);
         getAssets = apiResponse.assets;
 
-        // Store all assets if no date filter is applied (for lifetime calculations)
+        
         if (startDate == null && endDate == null) {
           allAssets = List.from(apiResponse.assets);
         }
@@ -228,6 +228,90 @@ class ApiProvider with ChangeNotifier {
       isLoading = false;
       notifyListeners();
       return right('Error getting user data: $e');
+    }
+  }
+
+  List<Deduction> allDeductions = []; // Store all deductions
+  DeductionsData? deductionsData; // Store pagination data
+
+  Future<Either<bool, String>> getAllDeductions(
+      {int page = 1, String? startDate, String? endDate}) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      String? token = await storage.read(key: 'auth_token');
+      if (token == null) {
+        isLoading = false;
+        notifyListeners();
+        return right('No authentication token found');
+      }
+
+      // Build URL with optional date parameters
+      String urlString = '$domain/api/investor/deductions?page=$page';
+      if (startDate != null && endDate != null) {
+        urlString += '&start_date=$startDate&end_date=$endDate';
+      }
+
+      final url = Uri.parse(urlString);
+      final headers = {'Authorization': 'Bearer $token'};
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        var responseData = jsonDecode(response.body);
+
+        // Parse the response using DeductionsResponse class
+        DeductionsResponse deductionsResponse =
+            DeductionsResponse.fromJson(responseData);
+
+        if (deductionsResponse.success) {
+          deductionsData = deductionsResponse.deductions;
+          allDeductions = deductionsResponse.deductions.data;
+          print('Successfully loaded ${allDeductions.length} deductions');
+          print('Total deductions: ${deductionsData?.total}');
+          if (startDate != null && endDate != null) {
+            print('Filtered by date range: $startDate to $endDate');
+          } else {
+            print('Loaded all deductions');
+          }
+          isLoading = false;
+          notifyListeners();
+          return left(true);
+        } else {
+          isLoading = false;
+          notifyListeners();
+          return right('Failed to get deductions data');
+        }
+      } else {
+        print('Failed to get deductions: ${response.statusCode}');
+        print('Response: ${response.body}');
+        isLoading = false;
+        notifyListeners();
+        return right('Failed to get deductions data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting deductions: $e');
+      isLoading = false;
+      notifyListeners();
+      return right('Error getting deductions data: $e');
+    }
+  }
+
+  // Method to filter deductions by month
+  Future<void> filterDeductionsByMonth(String monthType) async {
+    currentMonthFilter = monthType;
+
+    if (monthType == 'this_month') {
+      final dateRange = _getCurrentMonthRange();
+      await getAllDeductions(
+          startDate: dateRange['start'], endDate: dateRange['end']);
+    } else if (monthType == 'last_month') {
+      final dateRange = _getLastMonthRange();
+      await getAllDeductions(
+          startDate: dateRange['start'], endDate: dateRange['end']);
+    } else {
+      // Load all deductions without date filter
+      await getAllDeductions();
     }
   }
 }

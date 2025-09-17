@@ -69,10 +69,10 @@ class _HorizontalBikeCardsState extends State<HorizontalBikeCards> {
         };
       default:
         return {
-          'statusColor': const Color(0xFF6B7280),
-          'bgStatusColor': const Color(0xFF4B5563),
-          'borderClr': const Color(0xFF6B7280),
-          'iconPath': 'assets/idel_icon.png',
+          'statusColor': const Color(0xFF5DC452),
+          'bgStatusColor': const Color(0xFF2F9623),
+          'borderClr': const Color(0xFF5DC452),
+          'iconPath': 'assets/motorbike.png',
         };
     }
   }

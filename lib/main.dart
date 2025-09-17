@@ -3,7 +3,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:investorapp/provider/api_provider.dart';
 import 'package:investorapp/provider/earning_provider.dart';
-import 'package:investorapp/provider/theme_provider.dart';
 import 'package:investorapp/view/bottom_bar_screens/bottom_bar.dart';
 import 'package:investorapp/view/login_page.dart';
 import 'package:provider/provider.dart';
@@ -107,18 +106,10 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => EarningProvider()),
         ChangeNotifierProvider(create: (_) => ApiProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return GetMaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: lightTheme,
-            darkTheme: darkTheme,
-            themeMode: themeProvider.themeMode,
-            home: const SplashScreen(),
-          );
-        },
+      child: const GetMaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
       ),
     );
   }

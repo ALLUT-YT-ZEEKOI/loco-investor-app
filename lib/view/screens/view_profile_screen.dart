@@ -2,18 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:investorapp/customwidgets/profile_picture_update.dart';
 import 'package:investorapp/extrafunction/reusable.dart';
 import 'package:investorapp/items/all_transation.dart';
+import 'package:investorapp/provider/api_provider.dart';
+import 'package:provider/provider.dart';
 
-class ViewProfileScreen extends StatelessWidget {
+class ViewProfileScreen extends StatefulWidget {
   const ViewProfileScreen({super.key});
 
   @override
+  State<ViewProfileScreen> createState() => _ViewProfileScreenState();
+}
+
+class _ViewProfileScreenState extends State<ViewProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load user data after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ApiProvider>(context, listen: false).getUser();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final apiProvider = Provider.of<ApiProvider>(context, listen: false);
     return Scaffold(
-      backgroundColor: Colors.white, // Add this to ensure scaffold background is white
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: Container(
-          color: Colors.white, // Additional container with white background
+          color: Colors.white,
           child: AppBar(
             elevation: 0,
             scrolledUnderElevation: 0, // Disable elevation change on scroll
@@ -84,21 +101,21 @@ class ViewProfileScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  ProfilePictureUpdate(),
-                  SizedBox(height: 12),
+                  const ProfilePictureUpdate(),
+                  const SizedBox(height: 12),
                   Text(
-                    'Qureshi Abrahm',
-                    style: TextStyle(
+                    apiProvider.currentUser!.name,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Montserrat',
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
+                  const SizedBox(height: 4),
+                  const Text(
                     'Investor since 2025',
                     style: TextStyle(
                       fontSize: 12,
@@ -113,16 +130,12 @@ class ViewProfileScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Contact Info
-            _infoCard(
-              icon: 'assets/call_icon.png',
-              label: 'Phone Number',
-              value: '+91 8113892003',
-            ),
+            _infoCard(icon: 'assets/call_icon.png', label: 'Phone Number', value: apiProvider.currentUser!.phone),
             const SizedBox(height: 12),
             _infoCard(
               icon: 'assets/mail_icon.png',
               label: 'Email',
-              value: 'abad.sait@gmail.com',
+              value: apiProvider.currentUser!.email,
             ),
 
             const SizedBox(height: 16),
