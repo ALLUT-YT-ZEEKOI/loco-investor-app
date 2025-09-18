@@ -157,7 +157,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
   Widget _bankInfoCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        PageNav(context, const AllTransation());
+        pageNav(context, const AllTransation());
       },
       child: Container(
         padding: const EdgeInsets.all(16),

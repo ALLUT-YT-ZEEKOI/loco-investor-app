@@ -25,7 +25,7 @@ class _CameraOrGalleryBoxState extends State<ProfilePictureUpdate> {
                 final pickedFile = await _picker.pickImage(source: ImageSource.camera);
                 if (pickedFile != null) {
                   // Do something with the image
-                  print('Picked from camera: ${pickedFile.path}');
+
                 }
               },
             ),
@@ -36,8 +36,8 @@ class _CameraOrGalleryBoxState extends State<ProfilePictureUpdate> {
                 Navigator.pop(context);
                 final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
                 if (pickedFile != null) {
-                  // Do something with the image
-                  print('Picked from gallery: ${pickedFile.path}');
+      
+         
                 }
               },
             ),

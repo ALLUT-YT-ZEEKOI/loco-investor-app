@@ -18,7 +18,7 @@ void navigateWithFade(BuildContext context, Widget page) {
   Navigator.of(context).push(PageTransition(child: page, type: PageTransitionType.fade));
 }
 
-void PageNav(BuildContext context, Widget destination) {
+void pageNav(BuildContext context, Widget destination) {
   Navigator.of(context).push(PageTransition(child: destination, type: PageTransitionType.fade));
 }
 

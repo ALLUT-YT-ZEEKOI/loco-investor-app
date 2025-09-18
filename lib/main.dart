@@ -13,8 +13,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('🔔 Background message received: ${message.messageId}');
-  print('Background message data: ${message.data}');
 }
 
 void main() async {
@@ -43,57 +41,38 @@ void requestPermission() async {
       provisional: false);
 
   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-    print('✅ User granted permission');
   } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-    print('⚠️ User granted provisional permission');
-  } else {
-    print('❌ User declined or has not accepted permission');
-  }
+  } else {}
 }
 
 void setupFCM() {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('📩 Received message while in foreground:');
-    print('Message data: ${message.data}');
-
-    if (message.notification != null) {
-      print('Message also contained a notification: ${message.notification}');
-      // You might want to show a local notification or in-app notification here
-    }
+    if (message.notification != null) {}
   });
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    print('🔔 Notification tapped while app in background');
-    print('Message data: ${message.data}');
-
     handleNotificationTap(message);
   });
 
   FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
     if (message != null) {
-      print('🔔 Notification tapped when app was terminated');
-      print('Message data: ${message.data}');
-
       handleNotificationTap(message);
     }
   });
 
-  FirebaseMessaging.instance.getToken().then((token) {
-    print('🔑 FCM Token: $token');
-  });
+  FirebaseMessaging.instance.getToken().then((token) {});
 
   // Listen for token refresh
   FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-    print('🔄 FCM Token refreshed: $token');
     // Send the new token to your server
   });
 }
 
 void handleNotificationTap(RemoteMessage message) {
   if (message.data['screen'] == 'earnings') {
-    Get.to(() => BottomBar());
+    Get.to(() => const BottomBar());
   } else if (message.data['screen'] == 'profile') {
-    Get.to(() => BottomBar());
+    Get.to(() => const BottomBar());
   }
 }
 
@@ -142,7 +121,7 @@ class SplashScreenState extends State<SplashScreen>
       final token = await storage.read(key: 'auth_token');
       if (token != null) {
         _navigateWithMinDelay(startTime, () {
-          Get.offAll(() => BottomBar(),
+          Get.offAll(() => const BottomBar(),
               transition: Transition.downToUp,
               duration: const Duration(milliseconds: 500));
         });

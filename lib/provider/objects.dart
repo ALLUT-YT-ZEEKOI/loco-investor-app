@@ -10,10 +10,7 @@ class ApiResponse {
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
     return ApiResponse(
       success: json['success'] ?? false,
-      assets: (json['assets'] as List<dynamic>?)
-              ?.map((assetJson) => Asset.fromJson(assetJson))
-              .toList() ??
-          [],
+      assets: (json['assets'] as List<dynamic>?)?.map((assetJson) => Asset.fromJson(assetJson)).toList() ?? [],
     );
   }
 
@@ -211,18 +208,12 @@ class DeductionsData {
   factory DeductionsData.fromJson(Map<String, dynamic> json) {
     return DeductionsData(
       currentPage: json['current_page'] ?? 1,
-      data: (json['data'] as List<dynamic>?)
-              ?.map((deductionJson) => Deduction.fromJson(deductionJson))
-              .toList() ??
-          [],
+      data: (json['data'] as List<dynamic>?)?.map((deductionJson) => Deduction.fromJson(deductionJson)).toList() ?? [],
       firstPageUrl: json['first_page_url'] ?? '',
       from: json['from'] ?? 0,
       lastPage: json['last_page'] ?? 1,
       lastPageUrl: json['last_page_url'] ?? '',
-      links: (json['links'] as List<dynamic>?)
-              ?.map((linkJson) => PageLink.fromJson(linkJson))
-              .toList() ??
-          [],
+      links: (json['links'] as List<dynamic>?)?.map((linkJson) => PageLink.fromJson(linkJson)).toList() ?? [],
       nextPageUrl: json['next_page_url'],
       path: json['path'] ?? '',
       perPage: json['per_page'] ?? 20,
@@ -464,8 +455,7 @@ class Asset {
       categoryId: json['category_id'] ?? 0,
       kmLimit: json['km_limit'] ?? 0,
       speedLimit: json['speed_limit'] ?? 0,
-      otherDetails:
-          json['other_details'], // Keep as dynamic to handle both Map and List
+      otherDetails: json['other_details'], // Keep as dynamic to handle both Map and List
       manufacturer: json['manufacturer'] ?? '',
       manufacturerLogo: json['manufacturer_logo'] ?? '',
       ownerProfitAmt: (json['owner_profit_amt'] ?? 0.0).toDouble(),
@@ -496,6 +486,130 @@ class Asset {
       'deduction_sum': deductionSum,
       'transaction_count': transactionCount,
       'status': status
+    };
+  }
+}
+
+class TransactionHistoryResponse {
+  final String msg;
+  final TransactionHistoryData data;
+
+  TransactionHistoryResponse({
+    required this.msg,
+    required this.data,
+  });
+
+  factory TransactionHistoryResponse.fromJson(Map<String, dynamic> json) {
+    return TransactionHistoryResponse(
+      msg: json['msg'] ?? '',
+      data: TransactionHistoryData.fromJson(json['data'] ?? {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'msg': msg,
+      'data': data.toJson(),
+    };
+  }
+}
+
+class TransactionHistoryData {
+  final int currentPage;
+  final List<Transaction> data;
+  final String firstPageUrl;
+  final int from;
+  final int lastPage;
+  final String lastPageUrl;
+  final List<PageLink> links;
+  final String? nextPageUrl;
+  final String path;
+  final int perPage;
+  final String? prevPageUrl;
+  final int to;
+  final int total;
+
+  TransactionHistoryData({
+    required this.currentPage,
+    required this.data,
+    required this.firstPageUrl,
+    required this.from,
+    required this.lastPage,
+    required this.lastPageUrl,
+    required this.links,
+    this.nextPageUrl,
+    required this.path,
+    required this.perPage,
+    this.prevPageUrl,
+    required this.to,
+    required this.total,
+  });
+
+  factory TransactionHistoryData.fromJson(Map<String, dynamic> json) {
+    return TransactionHistoryData(
+      currentPage: json['current_page'] ?? 1,
+      data: (json['data'] as List<dynamic>?)?.map((transactionJson) => Transaction.fromJson(transactionJson)).toList() ?? [],
+      firstPageUrl: json['first_page_url'] ?? '',
+      from: json['from'] ?? 0,
+      lastPage: json['last_page'] ?? 1,
+      lastPageUrl: json['last_page_url'] ?? '',
+      links: (json['links'] as List<dynamic>?)?.map((linkJson) => PageLink.fromJson(linkJson)).toList() ?? [],
+      nextPageUrl: json['next_page_url'],
+      path: json['path'] ?? '',
+      perPage: json['per_page'] ?? 20,
+      prevPageUrl: json['prev_page_url'],
+      to: json['to'] ?? 0,
+      total: json['total'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'current_page': currentPage,
+      'data': data.map((transaction) => transaction.toJson()).toList(),
+      'first_page_url': firstPageUrl,
+      'from': from,
+      'last_page': lastPage,
+      'last_page_url': lastPageUrl,
+      'links': links.map((link) => link.toJson()).toList(),
+      'next_page_url': nextPageUrl,
+      'path': path,
+      'per_page': perPage,
+      'prev_page_url': prevPageUrl,
+      'to': to,
+      'total': total
+    };
+  }
+}
+
+class Transaction {
+  final String bookingStartDateTime;
+  final String assetIdentifier;
+  final String invoiceNo;
+  final double? ownerProfitAmt;
+
+  Transaction({
+    required this.bookingStartDateTime,
+    required this.assetIdentifier,
+    required this.invoiceNo,
+    this.ownerProfitAmt,
+  });
+
+  factory Transaction.fromJson(Map<String, dynamic> json) {
+    return Transaction(
+      bookingStartDateTime: json['booking_start_date_time'] ?? '',
+      assetIdentifier: json['asset_identifier'] ?? '',
+      invoiceNo: json['invoice_no'] ?? '',
+      ownerProfitAmt: json['owner_profit_amt'] != null ? double.tryParse(json['owner_profit_amt'].toString()) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'booking_start_date_time': bookingStartDateTime,
+      'asset_identifier': assetIdentifier,
+      'invoice_no': invoiceNo,
+      'owner_profit_amt': ownerProfitAmt?.toString(),
     };
   }
 }

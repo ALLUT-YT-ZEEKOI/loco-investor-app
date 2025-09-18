@@ -34,7 +34,10 @@ class _OtpScreenState extends State<OtpScreen> {
     result.fold((success) {
       Navigator.pushAndRemoveUntil(
         context,
-        PageTransition(type: PageTransitionType.rightToLeft, child: BottomBar(), duration: const Duration(milliseconds: 300)),
+        PageTransition(
+            type: PageTransitionType.rightToLeft,
+            child: const BottomBar(),
+            duration: const Duration(milliseconds: 300)),
         (route) => false,
       );
     }, (error) {
@@ -68,7 +71,10 @@ class _OtpScreenState extends State<OtpScreen> {
 
             const Text(
               'Verify your number',
-              style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 24,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -77,7 +83,9 @@ class _OtpScreenState extends State<OtpScreen> {
             ),
             const SizedBox(height: 32),
 
-            const Text('ENTER THE 6 DIGIT OTP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            const Text('ENTER THE 6 DIGIT OTP',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
 
             // ✅ OTP Input Field
@@ -125,10 +133,15 @@ class _OtpScreenState extends State<OtpScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: isLoading ? null : verifyOtp,
-                child: isLoading ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2) : const Text('Verify', style: TextStyle(fontSize: 14, color: Colors.white)),
+                child: isLoading
+                    ? const CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2)
+                    : const Text('Verify',
+                        style: TextStyle(fontSize: 14, color: Colors.white)),
               ),
             ),
 

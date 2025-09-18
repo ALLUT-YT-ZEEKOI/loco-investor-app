@@ -17,32 +17,32 @@ class MyDeductions extends StatefulWidget {
 
 class _MyDeductionsState extends State<MyDeductions> {
   bool isLoading = true;
-  bool isVehicleDeductionsLoading =
-      false; // Separate loading state for vehicle deductions section
+  bool isVehicleDeductionsLoading = false; // Separate loading state for vehicle deductions section
   String currentMonthFilter = 'this_month'; // Track current filter state
 
   @override
   void initState() {
     super.initState();
 
-    // Load deductions data
+    // Load all necessary data for deductions screen
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final apiProvider = Provider.of<ApiProvider>(context, listen: false);
 
       // Load all assets first (for total deductions card)
-      if (apiProvider.allAssets.isEmpty) {
-        await apiProvider.getAllAssets();
-      }
+      await apiProvider.getAllAssets();
 
-      // Load deductions data
+      // Load all deductions data
       await apiProvider.getAllDeductions();
 
-      // Then load current month data
+      // Load current month filtered assets
       await apiProvider.filterAssetsByMonth('this_month');
+
+      // Load current month filtered deductions
+      await apiProvider.filterDeductionsByMonth('this_month');
 
       if (mounted) {
         setState(() {
-          isLoading = false; // Hide initial loading after data is loaded
+          isLoading = false;
         });
       }
     });
@@ -53,8 +53,6 @@ class _MyDeductionsState extends State<MyDeductions> {
     if (assets.isEmpty) return "0";
 
     double total = assets.fold(0.0, (sum, asset) => sum + asset.deductionSum);
-    print(
-        '🔍 Deduction calculation: ${assets.length} assets, total deduction: $total');
     return total.toStringAsFixed(0);
   }
 
@@ -73,17 +71,15 @@ class _MyDeductionsState extends State<MyDeductions> {
   }
 
   // Get assets with deductions (filter out assets with 0 deductions)
-  List<Asset> _getAssetsWithDeductions(List<Asset> assets) {
+  List<Asset> getAssetsWithDeductions(List<Asset> assets) {
     return assets.where((asset) => asset.deductionSum > 0).toList();
   }
 
   // Handle month toggle
   void _handleMonthToggle(String monthType) async {
     setState(() {
-      currentMonthFilter =
-          monthType == 'This Month' ? 'this_month' : 'last_month';
-      isVehicleDeductionsLoading =
-          true; // Show shimmer for vehicle deductions section
+      currentMonthFilter = monthType == 'This Month' ? 'this_month' : 'last_month';
+      isVehicleDeductionsLoading = true; // Show shimmer for vehicle deductions section
     });
 
     final apiProvider = Provider.of<ApiProvider>(context, listen: false);
@@ -91,7 +87,6 @@ class _MyDeductionsState extends State<MyDeductions> {
     // Filter assets based on selected month
     await apiProvider.filterAssetsByMonth(currentMonthFilter);
 
-    // Filter deductions based on selected month
     await apiProvider.filterDeductionsByMonth(currentMonthFilter);
 
     // Hide shimmer after loading is complete
@@ -105,44 +100,53 @@ class _MyDeductionsState extends State<MyDeductions> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: customTitleAppBar(context, "My", "Deductions"),
-      body: isLoading
-          ? _buildShimmerLoading()
-          : Consumer<ApiProvider>(
-              builder: (context, apiProvider, child) {
-                return ScrollConfiguration(
-                  behavior: const ScrollBehavior().copyWith(overscroll: false),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 13, vertical: 8),
-                      child: Column(
-                        children: [
-                          HomePageInvesteCard_2(
-                            bigText:
-                                "₹${_formatNumber(double.parse(_calculateTotalDeductions(apiProvider.allAssets)))}",
-                            description: "Total\nDeductions",
-                            imagePath: 'assets/earning_icon.png',
-                          ),
-                          const SizedBox(height: 18),
-                          MonthToggle(
-                            isThisMonth: currentMonthFilter == 'this_month',
-                            onToggle: _handleMonthToggle,
-                          ),
-                          const SizedBox(height: 18),
-                          _summaryCard(apiProvider.getAssets),
-                          const SizedBox(height: 18),
-                          isVehicleDeductionsLoading
-                              ? shimmerBox(width: double.infinity, height: 70)
-                              : _deductionsList(apiProvider.allDeductions),
-                        ],
+      body: Consumer<ApiProvider>(
+        builder: (context, apiProvider, child) {
+          // Show shimmer if API is loading or local loading state
+          if (apiProvider.isLoading || isLoading) {
+            return _buildShimmerLoading();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Refresh all data including assets and deductions
+              await apiProvider.getAllAssets();
+              await apiProvider.getAllDeductions();
+              await apiProvider.filterAssetsByMonth(currentMonthFilter);
+              await apiProvider.filterDeductionsByMonth(currentMonthFilter);
+            },
+            child: ScrollConfiguration(
+              behavior: const ScrollBehavior().copyWith(overscroll: false),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                  child: Column(
+                    children: [
+                      HomePageInvesteCard2(
+                        bigText: "₹${_formatNumber(double.parse(_calculateTotalDeductions(apiProvider.allAssets)))}",
+                        description: "Total\nDeductions",
+                        imagePath: 'assets/earning_icon.png',
                       ),
-                    ),
+                      const SizedBox(height: 18),
+                      MonthToggle(
+                        isThisMonth: currentMonthFilter == 'this_month',
+                        onToggle: _handleMonthToggle,
+                      ),
+                      const SizedBox(height: 18),
+                      _summaryCard(apiProvider.getAssets),
+                      const SizedBox(height: 18),
+                      isVehicleDeductionsLoading ? shimmerBox(width: double.infinity, height: 70) : _deductionsList(apiProvider.allDeductions),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -161,13 +165,7 @@ class _MyDeductionsState extends State<MyDeductions> {
           side: const BorderSide(width: 2, color: Colors.white),
           borderRadius: BorderRadius.circular(20),
         ),
-        shadows: const [
-          BoxShadow(
-              color: Color(0x3F000000),
-              blurRadius: 20,
-              offset: Offset(0, 4),
-              spreadRadius: -7)
-        ],
+        shadows: const [BoxShadow(color: Color(0x3F000000), blurRadius: 20, offset: Offset(0, 4), spreadRadius: -7)],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -177,18 +175,9 @@ class _MyDeductionsState extends State<MyDeductions> {
             children: [
               Text(
                 'Assets with Deductions\n${currentMonthFilter == 'this_month' ? '(This Month)' : '(Last Month)'}',
-                style: const TextStyle(
-                    color: Color(0xFF7B7B7B),
-                    fontSize: 12,
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w500),
+                style: const TextStyle(color: Color(0xFF7B7B7B), fontSize: 12, fontFamily: 'Montserrat', fontWeight: FontWeight.w500),
               ),
-              Text(_countAssetsWithDeductions(assets).toString(),
-                  style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontFamily: 'Calibri',
-                      fontWeight: FontWeight.w800)),
+              Text(_countAssetsWithDeductions(assets).toString(), style: const TextStyle(color: Colors.black, fontSize: 18, fontFamily: 'Calibri', fontWeight: FontWeight.w800)),
             ],
           ),
           Column(
@@ -196,18 +185,9 @@ class _MyDeductionsState extends State<MyDeductions> {
             children: [
               Text(
                 'Total Deductions\n${currentMonthFilter == 'this_month' ? '(This Month)' : '(Last Month)'}',
-                style: const TextStyle(
-                    color: Color(0xFF7B7B7B),
-                    fontSize: 12,
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w500),
+                style: const TextStyle(color: Color(0xFF7B7B7B), fontSize: 12, fontFamily: 'Montserrat', fontWeight: FontWeight.w500),
               ),
-              Text('₹${_formatNumber(double.parse(totalDeductions))}',
-                  style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 20,
-                      fontFamily: 'Calibri',
-                      fontWeight: FontWeight.w700)),
+              Text('₹${_formatNumber(double.parse(totalDeductions))}', style: const TextStyle(color: Colors.black, fontSize: 20, fontFamily: 'Calibri', fontWeight: FontWeight.w700)),
             ],
           ),
         ],
@@ -219,10 +199,10 @@ class _MyDeductionsState extends State<MyDeductions> {
     if (deductions.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
-        child: Center(
+        child: const Center(
           child: Text(
             'No deductions found',
-            style: const TextStyle(
+            style: TextStyle(
               color: Color(0xFF7B7B7B),
               fontSize: 16,
               fontFamily: 'Montserrat',
@@ -236,11 +216,11 @@ class _MyDeductionsState extends State<MyDeductions> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Text(
             'Vehicle Deductions',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.black,
               fontSize: 16,
               fontFamily: 'Montserrat',
@@ -259,6 +239,10 @@ class _MyDeductionsState extends State<MyDeductions> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -352,9 +336,7 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      deduction.amount > 0
-                          ? deduction.amount.toStringAsFixed(0)
-                          : '0',
+                      deduction.amount > 0 ? deduction.amount.toStringAsFixed(0) : '0',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 18,
@@ -378,9 +360,7 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      deduction.companyShare > 0
-                          ? deduction.companyShare.toStringAsFixed(0)
-                          : '0',
+                      deduction.companyShare > 0 ? deduction.companyShare.toStringAsFixed(0) : '0',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 18,
@@ -404,9 +384,7 @@ class _MyDeductionsState extends State<MyDeductions> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      deduction.ownerShare > 0
-                          ? '₹${_formatNumber(deduction.ownerShare)}'
-                          : '₹0',
+                      deduction.ownerShare > 0 ? '₹${_formatNumber(deduction.ownerShare)}' : '₹0',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 18,

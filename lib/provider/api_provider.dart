@@ -8,310 +8,454 @@ import 'package:http/http.dart' as http;
 import 'package:investorapp/provider/objects.dart';
 
 class ApiProvider with ChangeNotifier {
-  final String domain = "https://sandbox.locorides.com";
-  static const FlutterSecureStorage storage = FlutterSecureStorage();
-  String? phonenumber;
-  bool isLoading = false;
-  int countrycode = 91;
+  // Constants
+  static const String _domain = "https://sandbox.locorides.com";
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const int _defaultCountryCode = 91;
+  static const Duration _requestTimeout = Duration(seconds: 30);
 
-  void setPhoneNumber(String phoneNumber) {
-    phonenumber = phoneNumber;
+  // State variables
+  String? _phonenumber;
+  bool _isLoading = false;
+  final int _countrycode = _defaultCountryCode;
+
+  // Cache is disabled - removed cache variables
+
+  // Getters
+  String? get phonenumber => _phonenumber;
+  bool get isLoading => _isLoading;
+  int get countrycode => _countrycode;
+
+  // Helper methods
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
   }
 
-  Future<void> getOtp() async {
-    if (phonenumber == null) return;
-    final url = Uri.parse('$domain/api/login');
-    final body = {'phone': phonenumber, 'country_code': '+$countrycode'};
+  Future<String?> _getAuthToken() async {
+    return await _storage.read(key: 'auth_token');
+  }
+
+  Map<String, String> _getAuthHeaders(String token) {
+    return {'Authorization': 'Bearer $token'};
+  }
+
+  Future<http.Response> _makeRequest(
+    String endpoint, {
+    Map<String, String>? headers,
+    Map<String, dynamic>? body,
+    String method = 'GET',
+  }) async {
+    final url = Uri.parse('$_domain$endpoint');
+
+    switch (method.toUpperCase()) {
+      case 'POST':
+        return await http.post(url, headers: headers, body: body).timeout(_requestTimeout);
+      case 'PUT':
+        return await http.put(url, headers: headers, body: body).timeout(_requestTimeout);
+      case 'DELETE':
+        return await http.delete(url, headers: headers).timeout(_requestTimeout);
+      default:
+        return await http.get(url, headers: headers).timeout(_requestTimeout);
+    }
+  }
+
+  bool _isCacheValid(DateTime? lastFetch, {Duration maxAge = const Duration(minutes: 5)}) {
+    // Disable cache - always return false to force fresh data
+    return false;
+  }
+
+  // Public methods
+  void setPhoneNumber(String phoneNumber) {
+    _phonenumber = phoneNumber;
+    notifyListeners();
+  }
+
+  Future<Either<bool, String>> getOtp() async {
+    if (_phonenumber == null) {
+      return right('Phone number is required');
+    }
+
     try {
-      final response = await http.post(url, body: body);
-      print("OTP Response: ${response.body}");
+      final response = await _makeRequest(
+        '/api/login',
+        method: 'POST',
+        body: {'phone': _phonenumber!, 'country_code': '+$_countrycode'},
+      );
+
+      if (response.statusCode == 200) {
+        return left(true);
+      } else {
+        final errorData = jsonDecode(response.body);
+        return right(errorData['message'] ?? 'Failed to send OTP');
+      }
     } catch (e) {
-      print("Error sending OTP: $e");
+      return right("Network error: $e");
     }
   }
 
   Future<Either<bool, String>> submitOtp(String otp) async {
-    final fcmToken = await FirebaseMessaging.instance.getToken();
-    print('📱 FCM Token: $fcmToken');
-    final os = Platform.isAndroid ? 'android' : 'ios';
-
-    final url = Uri.parse('$domain/api/login/otp-verify');
-    final body = {
-      'phone': phonenumber,
-      'country_code': '+$countrycode',
-      'otp': otp,
-      'fcm': fcmToken ?? '',
-      'app_code': 'investor_app',
-      'app_os': os
-    };
-    print(body);
+    if (_phonenumber == null) {
+      return right('Phone number is required');
+    }
 
     try {
-      final response = await http.post(url, body: body);
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      final os = Platform.isAndroid ? 'android' : 'ios';
+
+      final response = await _makeRequest(
+        '/api/login/otp-verify',
+        method: 'POST',
+        body: {'phone': _phonenumber!, 'country_code': '+$_countrycode', 'otp': otp, 'fcm': fcmToken ?? '', 'app_code': 'investor_app', 'app_os': os},
+      );
+
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData.containsKey('token')) {
-        print(responseData['token']);
+        await _storage.write(key: 'auth_token', value: responseData['token']);
 
-        await storage.write(key: 'auth_token', value: responseData['token']);
         return left(true);
       } else {
-        return right(responseData['message'] ?? 'OTP verification failed.');
+        return right(responseData['message'] ?? 'OTP verification failed');
       }
     } catch (e) {
-      return right("Error verifying OTP: $e");
+      return right("Network error: $e");
     }
   }
 
   Future<void> logout() async {
-    isLoading = true;
-    notifyListeners();
+    _setLoading(true);
     try {
-      await storage.delete(key: 'auth_token');
-    } catch (e) {
-      print("Logout error: $e");
+      await _storage.delete(key: 'auth_token');
+      _clearCache();
+    } finally {
+      _setLoading(false);
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
-  List<Asset> getAssets = [];
-  List<Asset> allAssets = []; // Store all assets for lifetime calculations
-  String currentMonthFilter = 'this_month'; // Track current filter
+  void _clearCache() {
+    // Cache is disabled - no cache to clear
+  }
 
-  Future<void> getAllAssets({String? startDate, String? endDate}) async {
-    isLoading = true;
-    notifyListeners();
+  // Data properties
+  List<Asset> getAssets = [];
+  List<Asset> allAssets = [];
+  String currentMonthFilter = 'this_month';
+  User? currentUser;
+
+  Future<Either<bool, String>> getAllAssets({String? startDate, String? endDate, bool forceRefresh = false}) async {
+    // Cache is disabled - always fetch fresh data
+    // Always show loading state (including during pull-to-refresh)
+    _setLoading(true);
 
     try {
-      String? token = await storage.read(key: 'auth_token');
+      final token = await _getAuthToken();
       if (token == null) {
-        return;
+        return right('No authentication token found');
       }
 
-      // Build URL with optional date parameters
-      String urlString = '$domain/api/investor/assets/all';
+      // Build endpoint with optional date parameters
+      String endpoint = '/api/investor/assets/all';
       if (startDate != null && endDate != null) {
-        urlString += '?start_date=$startDate&end_date=$endDate';
+        endpoint += '?start_date=$startDate&end_date=$endDate';
       }
 
-      final url = Uri.parse(urlString);
-      final headers = {'Authorization': 'Bearer $token'};
-      final response = await http.get(url, headers: headers);
+      final response = await _makeRequest(
+        endpoint,
+        headers: _getAuthHeaders(token),
+      );
 
       if (response.statusCode == 200) {
-        var responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+        final apiResponse = ApiResponse.fromJson(responseData);
 
-        // Use the ApiResponse class for proper parsing
-        ApiResponse apiResponse = ApiResponse.fromJson(responseData);
         getAssets = apiResponse.assets;
 
-        
         if (startDate == null && endDate == null) {
           allAssets = List.from(apiResponse.assets);
         }
 
-        print('Successfully loaded ${getAssets.length} assets');
         if (startDate != null && endDate != null) {
-          print('Filtered by date range: $startDate to $endDate');
-        } else {
-          print('Loaded all assets for lifetime calculations');
-        }
+        } else {}
+
+        return left(true);
       } else {
-        print('Failed to load assets: ${response.statusCode}');
-        print('Response: ${response.body}');
+        final errorMsg = 'Failed to load assets: ${response.statusCode}';
+
+        return right(errorMsg);
       }
     } catch (e) {
-      print('Error loading assets: $e');
+      final errorMsg = 'Error loading assets: $e';
+
+      return right(errorMsg);
     } finally {
-      isLoading = false;
-      notifyListeners();
+      // Always hide loading state
+      _setLoading(false);
     }
   }
 
+  // Date utility methods
   Map<String, String> _getCurrentMonthRange() {
     final now = DateTime.now();
     final firstDay = DateTime(now.year, now.month, 1);
     final lastDay = DateTime(now.year, now.month + 1, 0);
 
     return {
-      'start':
-          '${firstDay.year.toString().padLeft(4, '0')}-${firstDay.month.toString().padLeft(2, '0')}-${firstDay.day.toString().padLeft(2, '0')}',
-      'end':
-          '${lastDay.year.toString().padLeft(4, '0')}-${lastDay.month.toString().padLeft(2, '0')}-${lastDay.day.toString().padLeft(2, '0')}',
+      'start': _formatDate(firstDay),
+      'end': _formatDate(lastDay),
     };
   }
 
-  // Helper method to get date range for last month
   Map<String, String> _getLastMonthRange() {
     final now = DateTime.now();
     final firstDayLastMonth = DateTime(now.year, now.month - 1, 1);
     final lastDayLastMonth = DateTime(now.year, now.month, 0);
 
     return {
-      'start':
-          '${firstDayLastMonth.year.toString().padLeft(4, '0')}-${firstDayLastMonth.month.toString().padLeft(2, '0')}-${firstDayLastMonth.day.toString().padLeft(2, '0')}',
-      'end':
-          '${lastDayLastMonth.year.toString().padLeft(4, '0')}-${lastDayLastMonth.month.toString().padLeft(2, '0')}-${lastDayLastMonth.day.toString().padLeft(2, '0')}',
+      'start': _formatDate(firstDayLastMonth),
+      'end': _formatDate(lastDayLastMonth),
     };
   }
 
-  // Method to filter assets by month
-  Future<void> filterAssetsByMonth(String monthType) async {
+  String _formatDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // Filter methods
+  Future<Either<bool, String>> filterAssetsByMonth(String monthType) async {
     currentMonthFilter = monthType;
 
     // Load all assets first if not already loaded (for lifetime calculations)
     if (allAssets.isEmpty) {
-      await getAllAssets();
+      final result = await getAllAssets();
+      if (result.isRight()) {
+        return result;
+      }
     }
 
-    if (monthType == 'this_month') {
-      final dateRange = _getCurrentMonthRange();
-      await getAllAssets(
-          startDate: dateRange['start'], endDate: dateRange['end']);
-    } else if (monthType == 'last_month') {
-      final dateRange = _getLastMonthRange();
-      await getAllAssets(
-          startDate: dateRange['start'], endDate: dateRange['end']);
-    } else {
-      // Load all assets without date filter
-      await getAllAssets();
+    Map<String, String>? dateRange;
+    switch (monthType) {
+      case 'this_month':
+        dateRange = _getCurrentMonthRange();
+        break;
+      case 'last_month':
+        dateRange = _getLastMonthRange();
+        break;
+      default:
+        return await getAllAssets();
     }
+
+    return await getAllAssets(
+      startDate: dateRange['start'],
+      endDate: dateRange['end'],
+    );
   }
 
-  User? currentUser; // Store current user data
-
-  Future<Either<bool, String>> getUser() async {
-    isLoading = true;
-    notifyListeners();
+  Future<Either<bool, String>> getUser({bool forceRefresh = false}) async {
+    // Cache is disabled - always fetch fresh data
+    // Always show loading state (including during pull-to-refresh)
+    _setLoading(true);
 
     try {
-      String? token = await storage.read(key: 'auth_token');
+      final token = await _getAuthToken();
       if (token == null) {
-        isLoading = false;
-        notifyListeners();
         return right('No authentication token found');
       }
 
-      final url = Uri.parse('$domain/api/user');
-      final headers = {'Authorization': 'Bearer $token'};
-      final response = await http.get(url, headers: headers);
+      final response = await _makeRequest(
+        '/api/user',
+        headers: _getAuthHeaders(token),
+      );
 
       if (response.statusCode == 200) {
-        var responseData = jsonDecode(response.body);
-
-        // Parse the response using UserResponse class
-        UserResponse userResponse = UserResponse.fromJson(responseData);
+        final responseData = jsonDecode(response.body);
+        final userResponse = UserResponse.fromJson(responseData);
 
         if (userResponse.success) {
           currentUser = userResponse.user;
-          print('Successfully loaded user: ${currentUser?.name}');
-          isLoading = false;
-          notifyListeners();
+
           return left(true);
         } else {
-          isLoading = false;
-          notifyListeners();
           return right('Failed to get user data');
         }
       } else {
-        print('Failed to get user: ${response.statusCode}');
-        print('Response: ${response.body}');
-        isLoading = false;
-        notifyListeners();
-        return right('Failed to get user data: ${response.statusCode}');
+        final errorMsg = 'Failed to get user: ${response.statusCode}';
+
+        return right(errorMsg);
       }
     } catch (e) {
-      print('Error getting user: $e');
-      isLoading = false;
-      notifyListeners();
-      return right('Error getting user data: $e');
+      final errorMsg = 'Error getting user: $e';
+
+      return right(errorMsg);
+    } finally {
+      // Always hide loading state
+      _setLoading(false);
     }
   }
 
-  List<Deduction> allDeductions = []; // Store all deductions
-  DeductionsData? deductionsData; // Store pagination data
+  List<Deduction> allDeductions = [];
+  DeductionsData? deductionsData;
 
-  Future<Either<bool, String>> getAllDeductions(
-      {int page = 1, String? startDate, String? endDate}) async {
-    isLoading = true;
-    notifyListeners();
+  // Transaction history data
+  List<Transaction> allTransactions = [];
+  TransactionHistoryData? transactionHistoryData;
+
+  Future<Either<bool, String>> getAllDeductions({
+    int page = 1,
+    String? startDate,
+    String? endDate,
+    bool forceRefresh = false,
+  }) async {
+    // Cache is disabled - always fetch fresh data
+    // Always show loading state (including during pull-to-refresh)
+    _setLoading(true);
 
     try {
-      String? token = await storage.read(key: 'auth_token');
+      final token = await _getAuthToken();
       if (token == null) {
-        isLoading = false;
-        notifyListeners();
         return right('No authentication token found');
       }
 
-      // Build URL with optional date parameters
-      String urlString = '$domain/api/investor/deductions?page=$page';
+      // Build endpoint with optional date parameters
+      String endpoint = '/api/investor/deductions?page=$page';
       if (startDate != null && endDate != null) {
-        urlString += '&start_date=$startDate&end_date=$endDate';
+        endpoint += '&start_date=$startDate&end_date=$endDate';
       }
 
-      final url = Uri.parse(urlString);
-      final headers = {'Authorization': 'Bearer $token'};
-      final response = await http.get(url, headers: headers);
+      final response = await _makeRequest(
+        endpoint,
+        headers: _getAuthHeaders(token),
+      );
 
       if (response.statusCode == 200) {
-        var responseData = jsonDecode(response.body);
-
-        // Parse the response using DeductionsResponse class
-        DeductionsResponse deductionsResponse =
-            DeductionsResponse.fromJson(responseData);
+        final responseData = jsonDecode(response.body);
+        final deductionsResponse = DeductionsResponse.fromJson(responseData);
 
         if (deductionsResponse.success) {
           deductionsData = deductionsResponse.deductions;
           allDeductions = deductionsResponse.deductions.data;
-          print('Successfully loaded ${allDeductions.length} deductions');
-          print('Total deductions: ${deductionsData?.total}');
-          if (startDate != null && endDate != null) {
-            print('Filtered by date range: $startDate to $endDate');
-          } else {
-            print('Loaded all deductions');
-          }
-          isLoading = false;
-          notifyListeners();
+
           return left(true);
         } else {
-          isLoading = false;
-          notifyListeners();
           return right('Failed to get deductions data');
         }
       } else {
-        print('Failed to get deductions: ${response.statusCode}');
-        print('Response: ${response.body}');
-        isLoading = false;
-        notifyListeners();
-        return right('Failed to get deductions data: ${response.statusCode}');
+        final errorMsg = 'Failed to get deductions: ${response.statusCode}';
+
+        return right(errorMsg);
       }
     } catch (e) {
-      print('Error getting deductions: $e');
-      isLoading = false;
-      notifyListeners();
-      return right('Error getting deductions data: $e');
+      final errorMsg = 'Error getting deductions: $e';
+
+      return right(errorMsg);
+    } finally {
+      // Always hide loading state
+      _setLoading(false);
     }
   }
 
-  // Method to filter deductions by month
-  Future<void> filterDeductionsByMonth(String monthType) async {
+  Future<Either<bool, String>> getAllTransactions({int page = 1, String? startDate, String? endDate, bool forceRefresh = false}) async {
+    // Cache is disabled - always fetch fresh data
+    // Always show loading state (including during pull-to-refresh)
+    _setLoading(true);
+
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        return right('No authentication token found');
+      }
+
+      // Build endpoint with optional date parameters
+      String endpoint = '/api/investor/transactionHistory?page=$page';
+      if (startDate != null && endDate != null) {
+        endpoint += '&start_date=$startDate&end_date=$endDate';
+      }
+
+      final response = await _makeRequest(
+        endpoint,
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final transactionResponse = TransactionHistoryResponse.fromJson(responseData);
+
+        if (transactionResponse.msg.isNotEmpty) {
+          transactionHistoryData = transactionResponse.data;
+          allTransactions = transactionResponse.data.data;
+
+          return left(true);
+        } else {
+          return right('Failed to get transaction history data');
+        }
+      } else {
+        final errorMsg = 'Failed to get transaction history: ${response.statusCode}';
+
+        return right(errorMsg);
+      }
+    } catch (e) {
+      final errorMsg = 'Error getting transaction history: $e';
+
+      return right(errorMsg);
+    } finally {
+      // Always hide loading state
+      _setLoading(false);
+    }
+  }
+
+  // Filter methods
+  Future<Either<bool, String>> filterDeductionsByMonth(String monthType) async {
     currentMonthFilter = monthType;
 
-    if (monthType == 'this_month') {
-      final dateRange = _getCurrentMonthRange();
-      await getAllDeductions(
-          startDate: dateRange['start'], endDate: dateRange['end']);
-    } else if (monthType == 'last_month') {
-      final dateRange = _getLastMonthRange();
-      await getAllDeductions(
-          startDate: dateRange['start'], endDate: dateRange['end']);
-    } else {
-      // Load all deductions without date filter
-      await getAllDeductions();
+    Map<String, String>? dateRange;
+    switch (monthType) {
+      case 'this_month':
+        dateRange = _getCurrentMonthRange();
+        break;
+      case 'last_month':
+        dateRange = _getLastMonthRange();
+        break;
+      default:
+        return await getAllDeductions();
     }
+
+    return await getAllDeductions(
+      startDate: dateRange['start'],
+      endDate: dateRange['end'],
+    );
+  }
+
+  Future<Either<bool, String>> filterTransactionsByMonth(String monthType) async {
+    currentMonthFilter = monthType;
+
+    Map<String, String>? dateRange;
+    switch (monthType) {
+      case 'this_month':
+        dateRange = _getCurrentMonthRange();
+        break;
+      case 'last_month':
+        dateRange = _getLastMonthRange();
+        break;
+      default:
+        return await getAllTransactions();
+    }
+
+    return await getAllTransactions(
+      startDate: dateRange['start'],
+      endDate: dateRange['end'],
+    );
+  }
+
+  // Utility methods
+  void clearCache() {
+    // Cache is disabled - no cache to clear
+  }
+
+  void forceRefreshAll() {
+    // Trigger refresh of all data (cache is disabled, so this just calls the APIs)
+    getAllAssets(forceRefresh: true);
+    getUser(forceRefresh: true);
+    getAllDeductions(forceRefresh: true);
+    getAllTransactions(forceRefresh: true);
   }
 }

@@ -15,7 +15,8 @@ class EarningScreen extends StatefulWidget {
   State<EarningScreen> createState() => _EarningScreenState();
 }
 
-class _EarningScreenState extends State<EarningScreen> with TickerProviderStateMixin {
+class _EarningScreenState extends State<EarningScreen>
+    with TickerProviderStateMixin {
   late AnimationController _shimmerController;
   late Animation<double> _shimmerAnimation;
 
@@ -33,9 +34,11 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
     _shimmerController.repeat();
 
     // Defer the API call until after the build is complete
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ApiProvider>(context, listen: false).getAllAssets();
-      Provider.of<ApiProvider>(context, listen: false).getUser();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final apiProvider = Provider.of<ApiProvider>(context, listen: false);
+      // Load all necessary data for home screen
+      await apiProvider.getAllAssets();
+      await apiProvider.getUser();
     });
   }
 
@@ -94,7 +97,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
               const SizedBox(height: 10),
               // Bottom info shimmer
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -159,7 +163,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildShimmerBox(double width, double height, {double borderRadius = 4}) {
+  Widget _buildShimmerBox(double width, double height,
+      {double borderRadius = 4}) {
     return Container(
       width: width,
       height: height,
@@ -183,20 +188,87 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
     );
   }
 
+  // Helper method to format numbers with commas
+  String _formatNumber(double number) {
+    if (number.isNaN || number.isInfinite) return "0";
+
+    // Convert to integer and format with commas
+    int intValue = number.round();
+    String formatted = intValue.toString();
+
+    // Add commas for thousands
+    if (formatted.length > 3) {
+      String result = '';
+      int count = 0;
+      for (int i = formatted.length - 1; i >= 0; i--) {
+        if (count == 3) {
+          result = ',' + result;
+          count = 0;
+        }
+        result = formatted[i] + result;
+        count++;
+      }
+      return result;
+    }
+
+    return formatted;
+  }
+
   // Calculate total earnings from all assets
   String _calculateTotalEarnings(List<Asset> assets) {
     if (assets.isEmpty) return "0";
 
-    double total = assets.fold(0.0, (sum, asset) => sum + asset.ownerProfitAmt);
-    return total.toStringAsFixed(0);
+    double total = assets.fold(0.0, (sum, asset) {
+      double profit = asset.ownerProfitAmt.isNaN ? 0.0 : asset.ownerProfitAmt;
+      return sum + profit;
+    });
+
+    return _formatNumber(total);
   }
 
   // Calculate total payout from all assets
   String _calculateTotalPayout(List<Asset> assets) {
     if (assets.isEmpty) return "0";
 
-    double total = assets.fold(0.0, (sum, asset) => sum + asset.payoutSum);
-    return total.toStringAsFixed(0);
+    double total = assets.fold(0.0, (sum, asset) {
+      double payout = asset.payoutSum.isNaN ? 0.0 : asset.payoutSum;
+      return sum + payout;
+    });
+
+    return _formatNumber(total);
+  }
+
+  // Calculate total deductions
+  String _calculateTotalDeductions(List<Deduction> deductions) {
+    if (deductions.isEmpty) return "0";
+
+    double total = deductions.fold(0.0, (sum, deduction) {
+      double amount = deduction.amount.isNaN ? 0.0 : deduction.amount;
+      return sum + amount;
+    });
+
+    return _formatNumber(total);
+  }
+
+  // Calculate total remaining (Total Earnings - Total Payout)
+  String _calculateTotalRemaining(
+      List<Asset> assets, List<Deduction> deductions) {
+    if (assets.isEmpty) return "0";
+
+    double totalEarnings = assets.fold(0.0, (sum, asset) {
+      double profit = asset.ownerProfitAmt.isNaN ? 0.0 : asset.ownerProfitAmt;
+      return sum + profit;
+    });
+
+    double totalPayout = assets.fold(0.0, (sum, asset) {
+      double payout = asset.payoutSum.isNaN ? 0.0 : asset.payoutSum;
+      return sum + payout;
+    });
+
+    double remaining = totalEarnings - totalPayout;
+
+    // Format the number with commas for better readability
+    return _formatNumber(remaining);
   }
 
   @override
@@ -205,6 +277,7 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
     final apiProvider = Provider.of<ApiProvider>(context);
 
     return Scaffold(
+        backgroundColor: Colors.white,
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(80),
           child: AppBar(
@@ -213,7 +286,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
             automaticallyImplyLeading: false,
             flexibleSpace: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
                     Expanded(
@@ -230,7 +304,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
                               colors: [Color(0xFFE7E7E7), Colors.white],
                             ),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(width: 2, color: Colors.white),
+                              side: const BorderSide(
+                                  width: 2, color: Colors.white),
                               borderRadius: BorderRadius.circular(60),
                             ),
                             shadows: const [
@@ -245,9 +320,25 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
                           child: Row(
                             children: [
                               const SizedBox(width: 4),
-                              const CircleAvatar(
+                              CircleAvatar(
                                 radius: 22,
-                                backgroundImage: AssetImage('assets/maskperson.png'),
+                                backgroundColor: Colors.grey.shade300,
+                                child: Text(
+                                  (apiProvider.currentUser?.name ?? 'U')
+                                              .length >=
+                                          2
+                                      ? (apiProvider.currentUser?.name ?? 'U')
+                                          .substring(0, 2)
+                                          .toUpperCase()
+                                      : (apiProvider.currentUser?.name ?? 'U')
+                                          .toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 16,
+                                    fontFamily: 'Montserrat',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Column(
@@ -307,7 +398,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
                         onPressed: () {
                           // Notification action
                         },
-                        icon: Image.asset('assets/notification_icon.png', width: 22),
+                        icon: Image.asset('assets/notification_icon.png',
+                            width: 22),
                       ),
                     )
                   ],
@@ -349,7 +441,8 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
                         children: List.generate(
                             2,
                             (index) => Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
                                   child: Container(
                                     width: 6,
                                     height: 6,
@@ -396,38 +489,62 @@ class _EarningScreenState extends State<EarningScreen> with TickerProviderStateM
             }
 
             // Show content when loaded
-            return SingleChildScrollView(
-              child: Column(
-                children: [
-                  const HorizontalBikeCards(),
-                  Container(
-                      padding: const EdgeInsets.all(13),
-                      child: Column(children: [
-                        const DottedLine(
-                          dashColor: Colors.grey,
-                        ),
-                        const SizedBox(
-                          height: 18,
-                        ),
-                        Row(
-                          children: [
-                            HomePageInvesteCard(bigText: apiProvider.getAssets.length.toString(), description: "Total Assets\nInvested", imagePath: 'assets/earning_icon.png'),
-                            const Spacer(),
-                            HomePageInvesteCard(bigText: "₹${_calculateTotalEarnings(apiProvider.getAssets)}", description: "Total Earnings\n(Lifetime)", imagePath: 'assets/earning_icon.png'),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 18,
-                        ),
-                        Row(
-                          children: [
-                            HomePageInvesteCard(bigText: "₹${_calculateTotalPayout(apiProvider.getAssets)}", description: "Total Payout \n(Lifetime)", imagePath: 'assets/earning_icon.png'),
-                            const Spacer(),
-                            HomePageInvesteCard(bigText: "₹${_calculateTotalEarnings(apiProvider.getAssets)}", description: "Total Remaining \n(Lifetime)", imagePath: 'assets/earning_icon.png'),
-                          ],
-                        )
-                      ])),
-                ],
+            return RefreshIndicator(
+              onRefresh: () async {
+                // Call APIs to refresh data without showing loading state
+                await apiProvider.getAllAssets(forceRefresh: true);
+                await apiProvider.getUser(forceRefresh: true);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const HorizontalBikeCards(),
+                    Container(
+                        padding: const EdgeInsets.all(13),
+                        child: Column(children: [
+                          const DottedLine(
+                            dashColor: Colors.grey,
+                          ),
+                          const SizedBox(
+                            height: 18,
+                          ),
+                          Row(
+                            children: [
+                              HomePageInvesteCard(
+                                  bigText:
+                                      apiProvider.getAssets.length.toString(),
+                                  description: "Total Assets\nInvested",
+                                  imagePath: 'assets/earning_icon.png'),
+                              const Spacer(),
+                              HomePageInvesteCard(
+                                  bigText:
+                                      "₹${_calculateTotalEarnings(apiProvider.getAssets)}",
+                                  description: "Total Earnings\n(Lifetime)",
+                                  imagePath: 'assets/earning_icon.png'),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 18,
+                          ),
+                          Row(
+                            children: [
+                              HomePageInvesteCard(
+                                  bigText:
+                                      "₹${_calculateTotalPayout(apiProvider.getAssets)}",
+                                  description: "Total Payout \n(Lifetime)",
+                                  imagePath: 'assets/earning_icon.png'),
+                              const Spacer(),
+                              HomePageInvesteCard(
+                                  bigText:
+                                      "₹${_calculateTotalRemaining(apiProvider.getAssets, apiProvider.allDeductions)}",
+                                  description: "Total Remaining \n(Lifetime)",
+                                  imagePath: 'assets/earning_icon.png'),
+                            ],
+                          )
+                        ])),
+                  ],
+                ),
               ),
             );
           },

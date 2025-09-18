@@ -24,10 +24,16 @@ class _MyBikeScreenState extends State<MyEarnigns> {
   @override
   void initState() {
     super.initState();
-    // Load assets data for current month by default
+    // Load all necessary data for earnings screen
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Provider.of<ApiProvider>(context, listen: false)
-          .filterAssetsByMonth('this_month');
+      final apiProvider = Provider.of<ApiProvider>(context, listen: false);
+
+      // Load all assets first (for total earnings card)
+      await apiProvider.getAllAssets();
+
+      // Then load current month filtered data
+      await apiProvider.filterAssetsByMonth('this_month');
+
       if (mounted) {
         setState(() {
           isLoading = false; // Hide initial loading after data is loaded
@@ -72,55 +78,65 @@ class _MyBikeScreenState extends State<MyEarnigns> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: customTitleAppBar(context, "My", "Earnings"),
-      body: isLoading
-          ? _buildShimmerLoading()
-          : Consumer<ApiProvider>(
-              builder: (context, apiProvider, child) {
-                return ScrollConfiguration(
-                  behavior: const ScrollBehavior().copyWith(overscroll: false),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 13, vertical: 8),
-                      child: Column(
+      body: Consumer<ApiProvider>(
+        builder: (context, apiProvider, child) {
+          // Show shimmer if API is loading or local loading state
+          if (apiProvider.isLoading || isLoading) {
+            return _buildShimmerLoading();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Refresh all assets data and current month data
+              await apiProvider.getAllAssets();
+              await apiProvider.filterAssetsByMonth(currentMonthFilter);
+            },
+            child: ScrollConfiguration(
+              behavior: const ScrollBehavior().copyWith(overscroll: false),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              HomePageInvesteCard(
-                                bigText:
-                                    apiProvider.allAssets.length.toString(),
-                                description: "Total Bikes\ninvested",
-                                imagePath: 'assets/transport 1 (1).png',
-                              ),
-                              const Spacer(),
-                              HomePageInvesteCard(
-                                bigText:
-                                    "₹${_calculateTotalEarnings(apiProvider.allAssets)}",
-                                description: "Total Earnings\n(Lifetime)",
-                                imagePath: 'assets/earning_icon.png',
-                              ),
-                            ],
+                          HomePageInvesteCard(
+                            bigText: apiProvider.allAssets.length.toString(),
+                            description: "Total Bikes\ninvested",
+                            imagePath: 'assets/transport 1 (1).png',
                           ),
-                          const SizedBox(height: 18),
-                          MonthToggle(
-                            isThisMonth: currentMonthFilter == 'this_month',
-                            onToggle: _handleMonthToggle,
+                          const Spacer(),
+                          HomePageInvesteCard(
+                            bigText:
+                                "₹${_calculateTotalEarnings(apiProvider.allAssets)}",
+                            description: "Total Earnings\n(Lifetime)",
+                            imagePath: 'assets/earning_icon.png',
                           ),
-                          const SizedBox(height: 18),
-                          _summaryCard(apiProvider),
-                          const SizedBox(height: 18),
-                          isVehicleEarningsLoading
-                              ? shimmerBox(width: double.infinity, height: 70)
-                              : _earningRow(apiProvider.getAssets),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 18),
+                      MonthToggle(
+                        isThisMonth: currentMonthFilter == 'this_month',
+                        onToggle: _handleMonthToggle,
+                      ),
+                      const SizedBox(height: 18),
+                      _summaryCard(apiProvider),
+                      const SizedBox(height: 18),
+                      isVehicleEarningsLoading
+                          ? shimmerBox(width: double.infinity, height: 70)
+                          : _earningRow(apiProvider.getAssets),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 

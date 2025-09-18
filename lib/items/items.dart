@@ -66,12 +66,12 @@ class HomePageInvesteCard extends StatelessWidget {
   }
 }
 
-class HomePageInvesteCard_2 extends StatelessWidget {
+class HomePageInvesteCard2 extends StatelessWidget {
   final String bigText;
   final String description;
   final String imagePath;
 
-  const HomePageInvesteCard_2({
+  const HomePageInvesteCard2({
     super.key,
     required this.bigText,
     required this.description,

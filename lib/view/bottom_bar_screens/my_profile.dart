@@ -6,6 +6,7 @@ import 'package:investorapp/view/login_page.dart';
 import 'package:investorapp/view/screens/view_profile_screen.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MyProfile extends StatefulWidget {
   const MyProfile({super.key});
@@ -28,6 +29,7 @@ class _MyProfileState extends State<MyProfile> {
   Widget build(BuildContext context) {
     final apiProvider = Provider.of<ApiProvider>(context, listen: false);
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80),
         child: AppBar(
@@ -63,9 +65,20 @@ class _MyProfileState extends State<MyProfile> {
                       child: Row(
                         children: [
                           const SizedBox(width: 4),
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 22,
-                            backgroundImage: AssetImage('assets/maskperson.png'),
+                            backgroundColor: Colors.grey.shade300,
+                            child: Text(
+                              (apiProvider.currentUser?.name ?? 'U').length >= 2
+                                  ? (apiProvider.currentUser?.name ?? 'U').substring(0, 2).toUpperCase()
+                                  : (apiProvider.currentUser?.name ?? 'U').toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Column(
@@ -193,7 +206,7 @@ class _MyProfileState extends State<MyProfile> {
                 const SizedBox(
                   height: 18,
                 ),
-                legalSection()
+                legalSection(context)
               ],
             ),
           ),
@@ -273,7 +286,7 @@ class _MyProfileState extends State<MyProfile> {
   }
 }
 
-Container legalSection() {
+Widget legalSection(BuildContext context) {
   return Container(
     padding: const EdgeInsets.all(13),
     decoration: BoxDecoration(
@@ -298,11 +311,11 @@ Container legalSection() {
         const SizedBox(height: 7),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
         const SizedBox(height: 7),
-        buildListItem('assets/myProfileImages/terms_condition.png', 'Terms & Conditions'),
+        buildClickableListItem(context, 'assets/myProfileImages/terms_condition.png', 'Terms & Conditions', 'https://locorides.com/terms-conditions/'),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
-        buildListItem("assets/myProfileImages/privacy&policy.png", 'Privacy Policy'),
+        buildClickableListItem(context, "assets/myProfileImages/privacy&policy.png", 'Privacy Policy', 'https://locorides.com/privacy-policy/'),
         const Divider(color: Color(0xFFD0D0D0), thickness: 1.07),
-        buildListItem('assets/myProfileImages/help_support.png', 'Help & Support'),
+        buildClickableListItem(context, 'assets/myProfileImages/help_support.png', 'Help & Support', 'https://api.whatsapp.com/send/?phone=%2B918590809035&text&type=phone_number&app_absent=0'),
       ],
     ),
   );
@@ -324,6 +337,90 @@ Widget buildListItem(String path, String label) {
           ),
         ),
       ],
+    ),
+  );
+}
+
+Widget buildClickableListItem(BuildContext context, String path, String label, String url) {
+  return GestureDetector(
+    onTap: () async {
+      try {
+        final Uri uri = Uri.parse(url);
+
+        // Try different launch modes
+        bool launched = false;
+
+        // First try with external application mode
+        if (await canLaunchUrl(uri)) {
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        }
+
+        // If that fails, try with platform default
+        if (!launched) {
+          if (await canLaunchUrl(uri)) {
+            launched = await launchUrl(
+              uri,
+              mode: LaunchMode.platformDefault,
+            );
+          }
+        }
+
+        // If still fails, try with external non-browser application
+        if (!launched) {
+          if (await canLaunchUrl(uri)) {
+            launched = await launchUrl(
+              uri,
+              mode: LaunchMode.externalNonBrowserApplication,
+            );
+          }
+        }
+
+        if (!launched && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to open $url'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    },
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+      child: Row(
+        children: [
+          Image.asset(path, width: 25, height: 25, fit: BoxFit.cover),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.arrow_forward_ios,
+            size: 16,
+            color: Colors.grey,
+          ),
+        ],
+      ),
     ),
   );
 }
